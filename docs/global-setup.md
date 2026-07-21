@@ -8,6 +8,8 @@ This repository is the source of truth for Hermes infrastructure implementations
 - Embeddings: `scripts/tei-launch.sh`
 - Live indexing: `scripts/code-index-watch.sh`
 - Hindsight service: `scripts/hindsight-launch.sh`
+- Command safety gate: `scripts/guardian.sh`
+- MTPLX context synchronization: `scripts/mtplx-context-sync.py`
 - Second-brain sync and maintenance: `second-brain/scripts/`
 - Cron prompt templates: `cron/`
 - launchd templates: `launchd/`
@@ -19,6 +21,7 @@ Global Hermes paths are compatibility links or runtime state only:
 - `~/Developer/second-brain/System/Hermes/*.py` links to `second-brain/scripts/`
 - `~/.hermes/.env` holds machine-local settings and secrets
 - `~/.hermes/code-index/` and `~/.hermes/hindsight/` hold runtime state
+- `~/.mtplx/` and `~/Library/Application Support/MTPLX/` hold MTPLX model/settings state
 
 ## Verification
 
