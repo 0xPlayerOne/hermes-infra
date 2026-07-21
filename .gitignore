@@ -38,3 +38,4 @@ state.db
 .DS_Store
 Thumbs.db
 logs/
+.backups/
