@@ -30,7 +30,7 @@ Local-first AI infrastructure: embeddings, semantic indexing, second-brain sync,
 | Component | Purpose | Cost |
 |-----------|---------|------|
 | **TEI Embeddings** | Local text embeddings (Qwen3-0.6B, 1024-dim) | Free |
-| **Code Indexer** | Semantic search over `~/Developer` repos | Free |
+| **Code Indexer** | Semantic search over `$DEV_ROOT` repos | Free |
 | **Second-Brain Sync** | GitHub, Apple Notes, Drive → Chroma | Free |
 | **Hindsight** | Long-term memory recall | OpenRouter Free |
 | **Guardian** | Command gatekeeper (blocks destructive ops) | N/A |
@@ -40,22 +40,26 @@ Local-first AI infrastructure: embeddings, semantic indexing, second-brain sync,
 
 ```bash
 # 1. Install prerequisites
-brew install chromadb  # or use pip
 brew install watchman  # for live file indexing
 
 # 2. Set up TEI (Text Embeddings Inference)
 # See docs/tei-setup.md
 
 # 3. Clone and configure
-git clone <this-repo> ~/Developer/hermes-infra
+git clone <this-repo> "$HERMES_INFRA_DIR"
 cp templates/.env.example .env
 # Edit .env with your paths
+set -a; source .env; set +a
 
-# 4. Run the indexer
-source code-index-venv/bin/activate
+# 4. Create and activate the repo-local Python environment
+./code-index/indexer-setup.sh
+source .venv/bin/activate
+
+# 5. Run the indexer
 python code-index/indexer.py --index
 
-# 5. Run second-brain sync
+# 6. Verify second-brain dependencies and run sync
+./second-brain/scripts/sync-setup.sh
 cd second-brain && python sync.py
 ```
 
