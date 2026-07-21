@@ -16,15 +16,14 @@ DESIGN NOTE (precision > recall):
   object. Broad catch-alls like "always ..." are intentionally excluded because
   they capture injected bullet lists, not user intent.
 
-Run (with the code-index venv active):
-    source $HOME/.hermes/code-index-venv/bin/activate
-    cd "$SECOND_BRAIN_DIR/System/Hermes" && python3 synthesize.py
+Run with the repository environment loaded:
+    "$HERMES_INFRA_VENV/bin/python" "$HERMES_INFRA_DIR/second-brain/scripts/synthesize.py"
 
 Cron: Sunday nights.
 """
 import os, re, json, glob, datetime, urllib.request
 
-HERMES = os.path.expanduser("~/.hermes")
+HERMES = os.path.expanduser(os.environ.get("HERMES_HOME", "~/.hermes"))
 STATE_DB = os.path.join(HERMES, "state.db")
 MEMORY_MD = os.path.join(HERMES, "MEMORY.md")
 USER_MD = os.path.join(HERMES, "USER.md")

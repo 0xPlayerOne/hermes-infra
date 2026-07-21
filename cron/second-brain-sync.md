@@ -4,6 +4,6 @@
 
 **Prompt:**
 
-Run the unified Second-Brain daily sync for the `$SECOND_BRAIN_DIR` vault.
+Load the repo environment with `set -a; source "$HERMES_INFRA_DIR/.env"; set +a`, then run `"$HERMES_INFRA_VENV/bin/python" "$HERMES_INFRA_DIR/second-brain/scripts/sync.py"`.
 
 SAFETY: Route ALL downstream messages through the Hermes agent after the sync. Read the vault state, reconcile with GitHub, update indices, and report diffs/changes. Do not hallucinate changes.

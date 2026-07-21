@@ -45,6 +45,7 @@ brew install watchman  # for live file indexing
 # 2. Set up TEI (Text Embeddings Inference)
 # See docs/tei-setup.md
 # See docs/hindsight-setup.md for the memory service
+# See docs/global-setup.md for Hermes integration and source-of-truth rules
 
 # 3. Clone and configure
 git clone <this-repo> "$HERMES_INFRA_DIR"

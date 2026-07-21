@@ -4,4 +4,4 @@
 
 **Prompt:**
 
-Run the code indexer to keep the `$DEV_ROOT` semantic index fresh and auto-discover any new repos. After indexing, report a brief summary: total files indexed, repos added/removed, any errors. Trigger tei-launch watchdog if TEI is down.
+Load the repo environment with `set -a; source "$HERMES_INFRA_DIR/.env"; set +a`, then run `"$HERMES_INFRA_VENV/bin/python" "$HERMES_INFRA_DIR/code-index/indexer.py" --index`. Report a brief summary: total files indexed, repos added/removed, and errors. The indexer owns TEI health recovery.

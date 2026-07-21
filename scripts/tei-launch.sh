@@ -4,7 +4,26 @@
 
 set -euo pipefail
 
-TEI_BIN="${TEI_BIN:-$(command -v text-embeddings-router || true)}"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ENV_FILE="${HERMES_INFRA_ENV_FILE:-$REPO_ROOT/.env}"
+if [ -f "$ENV_FILE" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +a
+fi
+
+if [ -z "${TEI_BIN:-}" ]; then
+    TEI_BIN="$(command -v text-embeddings-router || true)"
+fi
+if [ -z "$TEI_BIN" ]; then
+    for candidate in /opt/homebrew/bin/text-embeddings-router /usr/local/bin/text-embeddings-router; do
+        if [ -x "$candidate" ]; then
+            TEI_BIN="$candidate"
+            break
+        fi
+    done
+fi
 MODEL="Qwen/Qwen3-Embedding-0.6B"
 PORT="${TEI_PORT:-6999}"
 # 2GB memory limit (conservative for M-series with 64GB total)

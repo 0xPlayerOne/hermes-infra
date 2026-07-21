@@ -4,4 +4,4 @@
 
 **Prompt:**
 
-Run the AGENTS.md coverage watchdog to keep the configured source-root fleet from going agent-blind. Execute: `find "$DEV_ROOT" -name AGENTS.md -not -path '*/node_modules/*' | head -50`. For each repo without AGENTS.md, report the gap. For each with one, confirm it has non-empty content (>50 chars). Do not write fixes unless asked.
+Load the repo environment with `set -a; source "$HERMES_INFRA_DIR/.env"; set +a`, then run `"$HERMES_INFRA_VENV/bin/python" "$HERMES_INFRA_DIR/scripts/agents-md-watchdog"`. Report the coverage and any gaps. Do not write fixes unless asked.

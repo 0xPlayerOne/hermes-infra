@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-agents-md-watchdog — keeps ~/Developer AGENTS.md coverage at 100%.
+agents-md-watchdog — keeps the configured source root AGENTS.md coverage at 100%.
 
-Runs after the Code Indexer cron. For every git repo under ~/Developer that
+Runs after the Code Indexer cron. For every git repo under the configured source root that
 lacks a root AGENTS.md, it:
   1. drops a constitution-stamp immediately via repo-standardize (so the repo
      is never agent-blind, even before a full deep-scan),
@@ -13,17 +13,17 @@ lacks a root AGENTS.md, it:
 Repos with a hand-written nested AGENTS.md (e.g. NiftyRoyale) are skipped.
 Repos already stamped by this script are left alone (idempotent).
 
-Usage: agents-md-watchdog [--deep]   (--deep also attempts a model deep-scan
-via agents-md-gen if a body is piped; normally left to subagents)
+Usage: agents-md-watchdog [--deep]   (--deep is reserved for the full model
+deep-scan workflow; normal cron runs only perform deterministic coverage checks)
 """
 import os
 import sys
 from pathlib import Path
 
-DEV = Path.home() / "Developer"
-STAMPER = Path.home() / ".hermes" / "scripts" / "repo-standardize"
-GEN = Path.home() / ".hermes" / "scripts" / "agents-md-gen"
-MISGEN = Path.home() / ".hermes" / "scripts" / "mise-toml-gen"
+REPO_ROOT = Path(os.environ.get("HERMES_INFRA_DIR", Path(__file__).resolve().parents[1]))
+DEV = Path(os.path.expanduser(os.environ.get("DEV_ROOT", "~/code")))
+STAMPER = REPO_ROOT / "scripts" / "repo-standardize"
+MISGEN = REPO_ROOT / "scripts" / "mise-toml-gen"
 
 def git_roots(dev: Path):
     roots = []
@@ -91,13 +91,13 @@ def main():
         sig = detect_stack(r)
         if sig in ("typescript", "python", "solidity", "rust", "mixed-ts-py"):
             if STAMPER.exists():
-                os.system(f'python3 "{STAMPER}" --force "{r}" >/dev/null 2>&1')
+                os.system(f'"{sys.executable}" "{STAMPER}" --force "{r}" >/dev/null 2>&1')
                 stamped.append(r)
         # C# / Unity / unknown -> leave for a real deep-scan (agents-md-generation skill)
 
         # Also drop a .mise.toml for reproducible toolchain (Node/Python/Rust pins)
         if MISGEN.exists():
-            os.system(f'python3 "{MISGEN}" "{r}" --write >/dev/null 2>&1')
+            os.system(f'"{sys.executable}" "{MISGEN}" "{r}" --write >/dev/null 2>&1')
 
     if not gaps:
         print("AGENTS.md coverage: 100% — no gaps found.")
@@ -105,7 +105,7 @@ def main():
     print(f"AGENTS.md gaps found: {len(gaps)}")
     for r in gaps:
         print(f"  - {r.relative_to(DEV)}  (stamped: {'yes' if r in stamped else 'no'})")
-    print("\nTo deep-scan, run the agents-md-generation skill per repo (2-stage: preamble + model body).")
+    print("\nTo deep-scan, use the agents-md-generation skill per repo.")
 
 if __name__ == "__main__":
     main()

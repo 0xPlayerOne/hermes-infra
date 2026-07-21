@@ -29,7 +29,8 @@ _LOCKED_MODEL = "Qwen/Qwen3-Embedding-0.6B"
 MODEL = _LOCKED_MODEL
 # 0.6B default dim = 1024 (under chroma/HNSW limits).
 EMBED_DIM = 1024
-STATE_FILE = Path(os.path.expanduser("~/.hermes/code-index/manifest.json"))
+STATE_FILE = Path(os.path.expanduser(os.environ.get(
+    "CODE_INDEX_STATE_FILE", "~/.hermes/code-index/manifest.json")))
 
 def enforce_model_available():
     """Verify TEI is actually EMBEDDING on localhost:6999 (Metal backend).

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Daily intelligence briefing for 0xPlayerOne -> delivered to Telegram by Hermes cron."""
-import subprocess, json, urllib.request, datetime, re, sys
+import os, subprocess, json, urllib.request, datetime, re, sys
 
-USER = "0xPlayerOne"
-REPOS = ["pink-binder","v0-portfolio","ftso-feed-value-provider","satoshi-ai","sync-graph"]
-ARXIV_CATS = "cat:cs.AI+OR+cat:cs.CL+OR+cat:cs.CR+OR+cat:cs.SE"
+USER = os.environ.get("GITHUB_USER", "")
+REPOS = [repo for repo in os.environ.get("INTEL_REPOS", "").split(",") if repo]
+ARXIV_CATS = os.environ.get("ARXIV_CATEGORIES", "cat:cs.AI+OR+cat:cs.CL+OR+cat:cs.CR+OR+cat:cs.SE")
 
 def run(cmd, timeout=25):
     try:
@@ -17,7 +17,7 @@ lines = [f"🔥 DAILY INTEL — {datetime.date.today().strftime('%B %d, %Y')}\n"
 # 1. GitHub issues + PRs across repos
 lines.append("📦 GITHUB")
 found = False
-for r in REPOS:
+for r in REPOS if USER else []:
     spec = f"--repo {USER}/{r}"
     issues = run(f"gh issue list {spec} --assignee @me --state open --json title,url --limit 5")
     prs = run(f"gh pr list {spec} --assignee @me --state open --json title,url --limit 5")
@@ -25,7 +25,6 @@ for r in REPOS:
         if raw and raw.startswith("["):
             try:
                 for it in json.loads(raw):
-                    kind = "issue" if "issue" in raw[:0] or True else "pr"
                     lines.append(f"  • [{r}] {it['title']}\n    {it['url']}")
                     found = True
             except: pass

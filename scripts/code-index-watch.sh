@@ -6,10 +6,25 @@
 
 set -u
 REPO="${HERMES_INFRA_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+ENV_FILE="${HERMES_INFRA_ENV_FILE:-$REPO/.env}"
+if [ -f "$ENV_FILE" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +a
+fi
 WATCH_ROOT="${DEV_ROOT:-$HOME/code}"
 SCRIPT_DIR="$REPO/code-index"
 VENV="${CODE_INDEX_VENV:-$REPO/.venv}/bin/activate"
 WATCHMAN="${WATCHMAN_BIN:-$(command -v watchman || true)}"
+if [ -z "$WATCHMAN" ]; then
+    for candidate in /opt/homebrew/bin/watchman /usr/local/bin/watchman; do
+        if [ -x "$candidate" ]; then
+            WATCHMAN="$candidate"
+            break
+        fi
+    done
+fi
 LOG="$REPO/logs/code-index-watch.log"
 
 mkdir -p "$(dirname "$LOG")"
