@@ -53,9 +53,9 @@
     <key>RunAtLoad</key>
     <true/>
     <key>StandardErrorPath</key>
-    <string>$HOME/.hermes/logs/hindsight-api.log</string>
+    <string>/path/to/hermes-infra/logs/hindsight-api.log</string>
     <key>StandardOutPath</key>
-    <string>$HOME/.hermes/logs/hindsight-api.log</string>
+    <string>/path/to/hermes-infra/logs/hindsight-api.log</string>
     <key>WorkingDirectory</key>
     <string>$HOME/.hermes/hindsight</string>
 </dict>

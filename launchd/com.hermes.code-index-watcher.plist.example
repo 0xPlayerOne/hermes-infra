@@ -9,17 +9,17 @@
     <array>
         <string>/bin/bash</string>
         <!-- Replace $HOME with your actual home directory path -->
-        <string>$HOME/.hermes/scripts/code-index-watch.sh</string>
+        <string>/path/to/hermes-infra/scripts/code-index-watch.sh</string>
     </array>
 
     <!-- Replace $HOME with your actual home directory path -->
     <key>WorkingDirectory</key>
-    <string>$HOME/.hermes/code-index</string>
+    <string>/path/to/hermes-infra/code-index</string>
 
     <key>StandardOutPath</key>
-    <string>$HOME/.hermes/logs/code-index-watch.log</string>
+    <string>/path/to/hermes-infra/logs/code-index-watch.log</string>
     <key>StandardErrorPath</key>
-    <string>$HOME/.hermes/logs/code-index-watch.log</string>
+    <string>/path/to/hermes-infra/logs/code-index-watch.log</string>
 
     <key>RunAtLoad</key>
     <true/>

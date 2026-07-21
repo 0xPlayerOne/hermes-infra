@@ -9,7 +9,7 @@
     <array>
         <string>/bin/bash</string>
         <!-- Replace $HOME with your actual home directory path -->
-        <string>$HOME/.hermes/scripts/tei-launch.sh</string>
+        <string>/path/to/hermes-infra/scripts/tei-launch.sh</string>
     </array>
 
     <key>RunAtLoad</key>
@@ -29,9 +29,9 @@
 
     <!-- Replace $HOME with your actual home directory path -->
     <key>StandardOutPath</key>
-    <string>$HOME/.hermes/logs/tei.log</string>
+    <string>/path/to/hermes-infra/logs/tei.log</string>
     <key>StandardErrorPath</key>
-    <string>$HOME/.hermes/logs/tei.log</string>
+    <string>/path/to/hermes-infra/logs/tei.log</string>
 
     <!-- TEI needs ~45s to warm up Metal on Apple Silicon before serving requests.
          Both Hindsight and the code-indexer depend on this endpoint. -->

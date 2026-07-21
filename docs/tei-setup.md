@@ -30,12 +30,12 @@ huggingface-cli download Qwen/Qwen3-Embedding-0.6B
 
 ## 3. Create the Launch Script
 
-Create `$HOME/.hermes/scripts/tei-launch.sh` (see `templates/tei-launch.sh` in this repo).
+Use the repo script at `scripts/tei-launch.sh`.
 Make it executable:
 
 ```bash
-chmod +x $HOME/.hermes/scripts/tei-launch.sh
-mkdir -p $HOME/.hermes/logs
+chmod +x "$HERMES_INFRA_DIR/scripts/tei-launch.sh"
+mkdir -p "$HERMES_INFRA_DIR/logs"
 ```
 
 The script starts TEI on port 6999 with:
@@ -51,7 +51,7 @@ then load:
 ```bash
 # Copy and edit
 cp launchd/com.hermes.tei.plist.example ~/Library/LaunchAgents/com.hermes.tei.plist
-# Edit: replace all $HOME with your actual home path (e.g., /Users/yourname)
+# Edit: replace all $HOME placeholders with the actual home path; launchd does not expand shell variables.
 # macOS launchd does not expand $HOME — use absolute paths.
 
 # Load the service
@@ -81,7 +81,7 @@ curl -s http://localhost:6999/v1/embeddings \
 ## Logs
 
 ```bash
-tail -f $HOME/.hermes/logs/tei.log
+tail -f "$HERMES_INFRA_DIR/logs/tei.log"
 ```
 
 ## Troubleshooting

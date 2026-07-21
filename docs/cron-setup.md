@@ -21,7 +21,7 @@ and optional delivery target (local or Discord channel).
 | Daily Standup — Satoshi | Daily 08:03 | Blockchain standup → #standup |
 | Hourly APFS Snapshot | Every hour | `tmutil snapshot` for backup safety |
 | Second-Brain Sync | Daily 04:40 | Sync second-brain vault with GitHub |
-| Code Indexer | Daily 05:30 | Re-index ~/Developer for semantic search |
+| Code Indexer | Daily 05:30 | Re-index `$DEV_ROOT` for semantic search |
 | AGENTS.md Watchdog | Daily 05:45 | Audit AGENTS.md coverage across repos |
 
 See `cron/` directory for full prompt text of each job.
