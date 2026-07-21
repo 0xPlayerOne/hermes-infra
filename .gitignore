@@ -28,6 +28,7 @@ launchd/*.plist
 
 # === HERMES INTERNAL STATE ===
 .hermes/
+hindsight/*.env
 *.db
 *.db-shm
 *.db-wal
