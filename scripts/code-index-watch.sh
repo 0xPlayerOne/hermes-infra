@@ -5,11 +5,12 @@
 # run is fast (seconds, not minutes) once the initial index exists.
 
 set -u
+REPO="$HOME/Developer/hermes-infra"
 WATCH_ROOT="$HOME/Developer"
-SCRIPT_DIR="$HOME/.hermes/code-index"
+SCRIPT_DIR="$REPO/code-index"
 VENV="$HOME/.hermes/code-index-venv/bin/activate"
 WATCHMAN="/opt/homebrew/bin/watchman"
-LOG="$HOME/.hermes/logs/code-index-watch.log"
+LOG="$REPO/logs/code-index-watch.log"
 
 mkdir -p "$(dirname "$LOG")"
 echo "[$(date)] code-index-watcher starting (watching $WATCH_ROOT)" >> "$LOG"

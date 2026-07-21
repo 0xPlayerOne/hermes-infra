@@ -10,7 +10,7 @@ PORT=6999
 # 2GB memory limit (conservative for M-series with 64GB total)
 MEMORY_LIMIT_BYTES=$((2 * 1024 * 1024 * 1024))
 MONITOR_INTERVAL=10
-LOG="$HOME/.hermes/logs/tei.log"
+LOG="$HOME/Developer/hermes-infra/logs/tei.log"
 
 # Low batch limits to prevent memory spikes
 MAX_BATCH_TOKENS=512
