@@ -11,9 +11,12 @@ Live markdown (MEMORY.md, USER.md, skills/) are SYMLINKED — not exported.
 Run: python export_memories.py
 Cron: wire to daily run after the code-indexer.
 """
-import os, json, subprocess, datetime, glob
+import os, json, datetime, glob
 
-VAULT = os.path.expanduser("~/Developer/second-brain")
+VAULT = os.path.expanduser(os.environ.get("SECOND_BRAIN_DIR", "~/second-brain"))
+WORK_SECTION = os.environ.get("WORK_SECTION", "Work")
+PERSONAL_SECTION = os.environ.get("PERSONAL_SECTION", "Personal")
+SPECIAL_SECTION = os.environ.get("SPECIAL_SECTION", "Special")
 HERMES_DIR = os.path.join(VAULT, "System", "Hermes")
 MEM_FACTS_DIR = os.path.join(HERMES_DIR, "memory-facts")
 HINDSIGHT_DIR = os.path.join(HERMES_DIR, "hindsight")
@@ -35,7 +38,8 @@ def export_memory_facts():
     if os.path.isdir(mem_root):
         for f in glob.glob(os.path.join(mem_root, "*.json")):
             try:
-                data = json.load(open(f))
+                with open(f, encoding="utf-8") as source:
+                    data = json.load(source)
             except Exception:
                 continue
             entries = data if isinstance(data, list) else [data]
@@ -82,23 +86,23 @@ def write_dashboard(mf, hs):
         d = os.path.join(VAULT, sub)
         return len(glob.glob(os.path.join(d, "*.md"))) if os.path.isdir(d) else 0
     sources = [
-        ("Nifty League/Calendar/", "Google Calendar — work"),
-        ("Personal/Calendar/", "Google Calendar — personal"),
-        ("Nifty League/Email/", "Gmail — work"),
-        ("Personal/Email/", "Gmail — personal"),
-        ("Nifty League/Sheets/", "Google Sheets — work"),
-        ("Personal/Sheets/", "Google Sheets — personal"),
-        ("Nifty League/Drive/", "Google Drive — work"),
-        ("Personal/Drive/", "Google Drive — personal"),
-        ("Nifty League/Meetings/", "Google Meet / call transcripts — work"),
-        ("Personal/Meetings/", "Google Meet / call transcripts — personal"),
-        ("Nifty League/Projects/", "NiftyLeague repos + READMEs (`languages:` tagged)"),
-        ("Personal/Projects/", "User repos + READMEs (`languages:` tagged)"),
-        ("Nifty League/Business/", "NiftyLeague business knowledge (nifty-docs)"),
-        ("Pink Binder/Sheets/", "Pokémon / TCG sheets (any account)"),
-        ("Pink Binder/Notes/", "Pokémon / TCG notes (any account)"),
-        ("Personal/Notes/", "Apple Notes (osascript)"),
-        ("Personal/Documents/", "Local Documents (PDF text)"),
+        (f"{WORK_SECTION}/Calendar/", "Calendar — work"),
+        (f"{PERSONAL_SECTION}/Calendar/", "Calendar — personal"),
+        (f"{WORK_SECTION}/Email/", "Email — work"),
+        (f"{PERSONAL_SECTION}/Email/", "Email — personal"),
+        (f"{WORK_SECTION}/Sheets/", "Sheets — work"),
+        (f"{PERSONAL_SECTION}/Sheets/", "Sheets — personal"),
+        (f"{WORK_SECTION}/Drive/", "Drive — work"),
+        (f"{PERSONAL_SECTION}/Drive/", "Drive — personal"),
+        (f"{WORK_SECTION}/Meetings/", "Meeting transcripts — work"),
+        (f"{PERSONAL_SECTION}/Meetings/", "Meeting transcripts — personal"),
+        (f"{WORK_SECTION}/Projects/", "Work repos + READMEs (`languages:` tagged)"),
+        (f"{PERSONAL_SECTION}/Projects/", "Personal repos + READMEs (`languages:` tagged)"),
+        (f"{WORK_SECTION}/Business/", "Work business knowledge"),
+        (f"{SPECIAL_SECTION}/Sheets/", "Special-topic sheets (any account)"),
+        (f"{SPECIAL_SECTION}/Notes/", "Special-topic notes (any account)"),
+        (f"{PERSONAL_SECTION}/Notes/", "Apple Notes (osascript)"),
+        (f"{PERSONAL_SECTION}/Documents/", "Local Documents (PDF text)"),
     ]
     src_lines = "\n".join(f"- `{s}` — {desc}: **{cnt(s)}** files" for s, desc in sources)
     with open(dash, "w") as out:
@@ -115,7 +119,7 @@ _Generated {datetime.datetime.now().isoformat()}_
 ## Agent meta — `System/Hermes/`
 - `System/Hermes/hindsight/` — Hindsight observations: **{hs}** files
 - `System/Hermes/memory-facts/` — memory-tool facts: **{mf}** files
-- Sync scripts: `sync.py`, `google_sync.py`, `sync_nifty_docs.py`, `export_memories.py`
+- Sync scripts: `sync.py`, `google_sync.py`, `export_memories.py`
 - Architecture: [[System/Assistant/architecture]] — how the pipeline works
 
 ## Synced data sources
@@ -150,7 +154,7 @@ hermes/
   Nifty League/   Personal/   Pink Binder/   (each: Calendar Email Sheets Drive Meetings Notes Projects Documents [Business for Nifty])
   People/  System/  Daily/
   System/Hermes/  ── sync scripts + agent meta (MEMORY/USER/SOUL/skills symlinks, hindsight/, memory-facts/)
-  Sync scripts in System/Hermes/: sync.py + google_sync.py + sync_nifty_docs.py + export_memories.py + rebuild_chroma.py
+   Sync scripts in System/Hermes/: sync.py + google_sync.py + export_memories.py
   Data sources (incremental): github/ apple-notes/ documents/ nifty-drive(personal-drive)/ calendar/ gmail/ sheets/ nifty-docs/
   └─ (routed into Nifty League/ Personal/ Pink Binder/ sections by account + content)
 ```

@@ -13,17 +13,21 @@ Auth: OAuth tokens in ~/.hermes/google-tokens/{account}.json (refreshed on expir
 """
 import os, json, base64, datetime, subprocess, glob, re, sys, time
 from pathlib import Path
-from urllib.parse import quote as urlquote
+from urllib.parse import quote as urlquote, urlencode
 
-HERMES = Path(os.path.expanduser("~/.hermes"))
+HERMES = Path(os.path.expanduser(os.environ.get("HERMES_HOME", "~/.hermes")))
 CREDS_FILE = HERMES / "google-oauth.keys.json" if os.path.exists(HERMES / "google-oauth.keys.json") \
     else HERMES / "gcp-oauth.keys.json"
 TOKEN_DIR = HERMES / "google-tokens"
-VAULT_DIR = HERMES.parent / "Developer" / "second-brain" / "Personal" / "Drive"
-VAULT_PERSONAL = HERMES.parent / "Developer" / "second-brain" / "Personal"
-VAULT_NIFTY = HERMES.parent / "Developer" / "second-brain" / "Nifty League"
-VAULT_PINK = HERMES.parent / "Developer" / "second-brain" / "Pink Binder"
-VAULT_MEETINGS = HERMES.parent / "Developer" / "second-brain" / "meetings"
+VAULT_ROOT = Path(os.path.expanduser(os.environ.get("SECOND_BRAIN_DIR", "~/second-brain")))
+WORK_SECTION = os.environ.get("WORK_SECTION", "Work")
+PERSONAL_SECTION = os.environ.get("PERSONAL_SECTION", "Personal")
+SPECIAL_SECTION = os.environ.get("SPECIAL_SECTION", "Special")
+VAULT_DIR = VAULT_ROOT / PERSONAL_SECTION / "Drive"
+VAULT_PERSONAL = VAULT_ROOT / PERSONAL_SECTION
+VAULT_NIFTY = VAULT_ROOT / WORK_SECTION
+VAULT_PINK = VAULT_ROOT / SPECIAL_SECTION
+VAULT_MEETINGS = VAULT_ROOT / "meetings"
 # Nifty League (andy = work account)
 VAULT_CALENDAR = VAULT_NIFTY / "Calendar"
 VAULT_GMAIL = VAULT_NIFTY / "Email"
@@ -52,7 +56,7 @@ VAULT_PINK_NOTES = VAULT_PINK / "Notes"
 VAULT_PINK_DOCS = VAULT_PINK / "Documents"
 VAULT_PINK_PROJECTS = VAULT_PINK / "Projects"
 CHROMA_DIR = HERMES / "second-brain-chroma"
-EMBED_MODEL = "qwen3-embedding:4b"
+EMBED_MODEL = os.environ.get("EMBED_MODEL", "Qwen/Qwen3-Embedding-0.6B")
 ACCOUNTS = ["andy", "andrew", "angel"]
 
 # ============================================================================
@@ -126,65 +130,29 @@ def get_col():
         return _NullCollection()
 
 
-EMBED_MODEL = "qwen3-embedding:4b"
-
-
-def _ollama_reachable():
-    """Fast reachability probe — Ollama not installed/running should NOT block
-    the whole sync. Returns False within ~2s if the embed endpoint is dead."""
-    import socket
-    try:
-        s = socket.create_connection(("127.0.0.1", 11434), timeout=2)
-        s.close()
-        return True
-    except Exception:
-        return False
-
-
 def embed(texts):
-    """Best-effort embeddings. If Ollama is unreachable, returns all-None
-    FAST so store() still writes the vault file (folder structure preserved)
-    without hanging the entire sync. Never raises."""
-    if not _ollama_reachable():
-        return [None] * len(texts)
-    import ollama
+    """Best-effort embeddings through the same TEI service as the indexer."""
+    import urllib.request
     try:
-        client = ollama.Client(timeout=15)
+        url = os.environ.get("TEI_EMBED_URL", "http://127.0.0.1:6999/v1/embeddings")
+        req = urllib.request.Request(
+            url, data=json.dumps({"model": EMBED_MODEL, "input": texts}).encode(),
+            headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=60) as response:
+            data = json.load(response)
+        return [item["embedding"] for item in data.get("data", [])]
     except Exception:
         return [None] * len(texts)
-    out = []
-    for i in range(0, len(texts), 3):
-        group = texts[i:i + 3]
-        embs = None
-        for attempt in range(2):
-            try:
-                res = client.embed(model=EMBED_MODEL, input=group)
-                embs = res.get("embeddings")
-                if embs:
-                    break
-            except Exception:
-                time.sleep(3)
-        if embs:
-            out.extend(embs)
-        else:
-            out.extend([None] * len(group))
-    return out
-
-
-def restart_ollama():
-    try:
-        subprocess.Popen(["/opt/homebrew/opt/ollama/bin/ollama", "serve"],
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return True
-    except Exception:
-        return False
 
 
 def gapi_get(url, creds, account, label="api", raw=False):
     """GET a Google API URL with Bearer auth. Returns parsed JSON (default) or
     raw bytes (raw=True) for binary downloads like Drive media."""
     token = creds.get("token") or creds.get("access_token")
-    cmd = ["curl", "-s", "-m", "60", "-H", f"Authorization: Bearer ***", url]
+    if not token:
+        log(f"  {label}: missing access token")
+        return None
+    cmd = ["curl", "-sS", "-f", "-m", "60", "-H", f"Authorization: Bearer {token}", url]
     for attempt in range(3):
         try:
             res = subprocess.run(cmd, capture_output=True, timeout=70)
@@ -198,8 +166,7 @@ def gapi_get(url, creds, account, label="api", raw=False):
             return json.loads(body)
         except Exception as e:
             log(f"  {label} GET err ({attempt}): {type(e).__name__}")
-            if not restart_ollama():
-                break
+            time.sleep(1)
     return None
 
 
@@ -237,7 +204,7 @@ def refresh_token(account, creds):
             ["curl", "-s", "-m", "30", "-X", "POST",
              "https://oauth2.googleapis.com/token",
              "-H", "Content-Type: application/x-www-form-urlencoded",
-             "--data", "&".join(f"{k}={v}" for k, v in data.items())],
+              "--data", urlencode(data)],
             capture_output=True, text=True, timeout=40)
         tok = json.loads(res.stdout)
         if "access_token" in tok:

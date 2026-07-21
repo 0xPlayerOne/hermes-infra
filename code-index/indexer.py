@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Code Indexer — walks ~/Developer, discovers all git repos, chunks source
+Code Indexer — walks $DEV_ROOT, discovers all git repos, chunks source
 files, embeds with Text Embeddings Inference (TEI) running Qwen/Qwen3-Embedding-0.6B
 natively on Apple Silicon Metal, stores in chromadb.
 
 Design:
-- AUTO-DISCOVER: any git repo dropped into ~/Developer is indexed automatically.
+- AUTO-DISCOVER: any git repo dropped into $DEV_ROOT is indexed automatically.
 - INCREMENTAL: per-file content hash tracked; only changed files re-embed.
 - CODE-OPTIMIZED chunking: split at function/class boundaries for precision.
 - METADATA: repo, owner, rel_path, language, so queries can scope.
 
 Usage:
-  indexer.py --index        # full or incremental index of ~/Developer
+  indexer.py --index        # full or incremental index of $DEV_ROOT
   indexer.py --reindex      # wipe + full re-index (use after model change)
   indexer.py --status       # show indexed repos + chunk counts
   indexer.py --query "text" [--repo name] [--n 8]
@@ -19,7 +19,7 @@ Usage:
 import os, sys, json, hashlib, subprocess, argparse, time
 from pathlib import Path
 
-DEV_ROOT = Path(os.environ.get("DEV_ROOT", os.path.expanduser("~/Developer")))
+DEV_ROOT = Path(os.path.expanduser(os.environ.get("DEV_ROOT", "~/code")))
 CHROMA_DIR = Path(os.environ.get("CHROMA_DIR", os.path.expanduser("~/.hermes/code-index/chroma")))
 # CODE INDEX EMBEDDING MODEL — LOCKED.
 # This index is built exclusively for Qwen/Qwen3-Embedding-0.6B via TEI (Metal).
@@ -88,6 +88,7 @@ CODE_EXTS = {
 MAX_CHUNK_CHARS = int(os.environ.get("MAX_CHUNK_CHARS", 2000))
 CHUNK_OVERLAP = 200
 HARD_CHUNK_CAP = 4000    # never embed a chunk larger than this
+EMBED_MODEL_CTX = 2000
 MAX_FILE_BYTES = 200_000 # skip files > 200KB (build artifacts / data dumps)
 
 def log(m): print(f"[indexer] {m}", flush=True)
@@ -195,8 +196,8 @@ def save_state(state):
 # TEI via Homebrew, Qwen/Qwen3-Embedding-0.6B natively on Apple Silicon
 # Metal. No Python embedding stack (sentence-transformers/torch purged).
 # TEI serves OpenAI-compatible /v1/embeddings on localhost:6999.
-_TEI_URL = "http://localhost:6999/v1/embeddings"
-_TEI_MODEL = "Qwen/Qwen3-Embedding-0.6B"
+_TEI_URL = os.environ.get("TEI_EMBED_URL", "http://127.0.0.1:6999/v1/embeddings")
+_TEI_MODEL = os.environ.get("EMBED_MODEL", "Qwen/Qwen3-Embedding-0.6B")
 _TEI_DIM = 1024  # 0.6B default; under pgvector's 2000 HNSW limit
 
 
@@ -260,13 +261,15 @@ def get_chroma():
 # Chunks per embed call. TEI on Metal processes sequences serially:
 # ~1s/sequence, so 16 texts ≈ 16-20s/batch (safe under the 120s timeout).
 # 32 worked but sat close to the edge under sustained load. 16 is stable.
-EMDED_BATCH = 16
+EMBED_BATCH = 16
 # Delay between embed batches (seconds). Tiny breath; doesn't affect throughput.
 EMBED_BATCH_DELAY = 0.05
 
 # TEI Metal occasionally wedges under sustained load (hangs at 0% CPU).
 # When that happens we restart it via launchd and retry the batch.
-TEI_PLIST = os.path.expanduser("~/Library/LaunchAgents/com.hermes.tei.plist")
+TEI_PLIST = os.path.join(
+    os.path.expanduser(os.environ.get("HERMES_LAUNCH_AGENTS_DIR", "~/Library/LaunchAgents")),
+    "com.hermes.tei.plist")
 _tei_restart_in_progress = False
 
 def restart_tei():
@@ -310,7 +313,7 @@ def embed_batch(client, texts):
     i = 0
     n = len(texts)
     while i < n:
-        batch = texts[i:i + EMDED_BATCH]
+        batch = texts[i:i + EMBED_BATCH]
         try:
             vecs = _embed_with_timeout(client, batch)
             for j, v in enumerate(vecs):
@@ -360,7 +363,7 @@ def embed_batch(client, texts):
                         log(f"  ⚠️ TEI restart failed — skipping batch {i}-{i+len(batch)}")
                 except Exception:
                     log(f"  ⚠️ embed failed on batch {i}-{i+len(batch)} — skipping")
-        i += EMDED_BATCH
+        i += EMBED_BATCH
     return out
 
 
@@ -531,15 +534,14 @@ def cmd_index(reindex=False):
                 continue
         # Phase 2: embed all collected chunks in big batches (one TEI call each).
         if collected:
-            for b0 in range(0, len(collected), EMDED_BATCH):
-                b1 = min(b0 + EMDED_BATCH, len(collected))
+            for b0 in range(0, len(collected), EMBED_BATCH):
+                b1 = min(b0 + EMBED_BATCH, len(collected))
                 batch = [c for (_, _, c) in collected[b0:b1]]
                 log(f"  >> batch {b0}-{b1}")
                 try:
                     embeddings = embed_batch(client, batch)
                     log(f"  << batch {b0}-{b1} none={embeddings.count(None)}")
                 except Exception as crash_err:
-                    crashed_files.update(str(p) for (rel, _, _) in collected[b0:b1])
                     log(f"  ⚠️ embed crashed on batch {b0}-{b1} — skipping (TEI down)")
                     continue
                 for k, (rel, lang, ch) in enumerate(collected[b0:b1]):

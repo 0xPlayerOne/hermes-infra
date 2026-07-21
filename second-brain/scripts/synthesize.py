@@ -18,7 +18,7 @@ DESIGN NOTE (precision > recall):
 
 Run (with the code-index venv active):
     source $HOME/.hermes/code-index-venv/bin/activate
-    cd $HOME/Developer/second-brain/System/Hermes && python3 synthesize.py
+    cd "$SECOND_BRAIN_DIR/System/Hermes" && python3 synthesize.py
 
 Cron: Sunday nights.
 """
@@ -28,7 +28,7 @@ HERMES = os.path.expanduser("~/.hermes")
 STATE_DB = os.path.join(HERMES, "state.db")
 MEMORY_MD = os.path.join(HERMES, "MEMORY.md")
 USER_MD = os.path.join(HERMES, "USER.md")
-VAULT = os.path.expanduser("~/Developer/second-brain")
+VAULT = os.path.expanduser(os.environ.get("SECOND_BRAIN_DIR", "~/second-brain"))
 MEM_FACTS_DIR = os.path.join(VAULT, "System", "Hermes", "memory-facts")
 HINDSIGHT_URL = "http://127.0.0.1:9177/memories"
 
@@ -55,7 +55,7 @@ PATTERNS = [
      lambda m: f"CONV-NAMING: Replace stale '{m.group(1)}' references (user-directed cleanup).", MEMORY_MD),
     # delete the clone / we already have one
     (r"^\s*(delete the clone|we already have (?:one|this|that))",
-     lambda m: "PREFERENCE-NODEDUP: Do NOT create duplicate repo clones — check ~/Developer first; remove redundant clones.", USER_MD),
+     lambda m: "PREFERENCE-NODEDUP: Do NOT create duplicate repo clones — check the configured source root first; remove redundant clones.", USER_MD),
     # explicit model/LLM direction
     (r"^\s*(?:if\s+[\w]+\s+needs\s+an\s+llm|point\s+it\s+at|use|try)\b.*?\b(kilo[ -]?auto[/-]?free|kilo\s+free|hy3|qwen3?[- ]?embedding[\w./:-]*|tei|ollama)\b",
      lambda m: f"DECISION-MODEL: User directed embedding/LLM to use '{m.group(1)}' where applicable.", MEMORY_MD),

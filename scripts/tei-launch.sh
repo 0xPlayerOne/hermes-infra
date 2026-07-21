@@ -4,13 +4,13 @@
 
 set -euo pipefail
 
-TEI_BIN="/opt/homebrew/bin/text-embeddings-router"
+TEI_BIN="${TEI_BIN:-$(command -v text-embeddings-router || true)}"
 MODEL="Qwen/Qwen3-Embedding-0.6B"
-PORT=6999
+PORT="${TEI_PORT:-6999}"
 # 2GB memory limit (conservative for M-series with 64GB total)
 MEMORY_LIMIT_BYTES=$((2 * 1024 * 1024 * 1024))
 MONITOR_INTERVAL=10
-LOG="$HOME/Developer/hermes-infra/logs/tei.log"
+LOG="${HERMES_LOG_DIR:-$HOME/.hermes/logs}/tei.log"
 
 # Low batch limits to prevent memory spikes
 MAX_BATCH_TOKENS=512
@@ -18,6 +18,11 @@ MAX_BATCH_REQUESTS=16
 MAX_CONCURRENT_REQUESTS=16
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG"; }
+mkdir -p "$(dirname "$LOG")"
+if [ -z "$TEI_BIN" ] || [ ! -x "$TEI_BIN" ]; then
+    log "ERROR: text-embeddings-router not found"
+    exit 127
+fi
 
 # Find TEI PID by port
 find_tei_pid() {
@@ -28,7 +33,7 @@ find_tei_pid() {
 check_memory() {
     local pid
     pid=$(find_tei_pid)
-    if [ -n "$pid" ] && [ -d "/proc/$pid" ]; then
+    if [ -n "$pid" ]; then
         local rss
         rss=$(ps -p "$pid" -o rss= 2>/dev/null | tr -d ' ')
         if [ -n "$rss" ] && [ "$rss" -gt "$((MEMORY_LIMIT_BYTES / 1024))" ]; then
@@ -71,6 +76,11 @@ log "TEI started as PID $TEI_PID"
 
 # Wait for TEI to be ready
 for i in $(seq 1 60); do
+    if ! kill -0 "$TEI_PID" 2>/dev/null; then
+        log "TEI exited before becoming healthy"
+        wait "$TEI_PID" || true
+        exit 1
+    fi
     if curl -sS --max-time 2 "http://127.0.0.1:$PORT/health" >/dev/null 2>&1; then
         log "TEI healthy after ${i}s"
         break

@@ -1,18 +1,25 @@
 #!/bin/bash
 # code-index-watch.sh — real-time incremental code indexing via Watchman.
-# Watches ~/Developer for file changes, debounces 60s, runs indexer.py --index.
+# Watches $DEV_ROOT (or ~/code) for file changes, debounces 60s, runs indexer.py --index.
 # The indexer is hash-based incremental (only changed files re-embed), so each
 # run is fast (seconds, not minutes) once the initial index exists.
 
 set -u
-REPO="$HOME/Developer/hermes-infra"
-WATCH_ROOT="$HOME/Developer"
+REPO="${HERMES_INFRA_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+WATCH_ROOT="${DEV_ROOT:-$HOME/code}"
 SCRIPT_DIR="$REPO/code-index"
-VENV="$HOME/.hermes/code-index-venv/bin/activate"
-WATCHMAN="/opt/homebrew/bin/watchman"
+VENV="${CODE_INDEX_VENV:-$REPO/.venv}/bin/activate"
+WATCHMAN="${WATCHMAN_BIN:-$(command -v watchman || true)}"
 LOG="$REPO/logs/code-index-watch.log"
 
 mkdir -p "$(dirname "$LOG")"
+BUSY_FILE="${TMPDIR:-/tmp}/hermes-code-index-busy"
+cleanup() { rm -f "$BUSY_FILE"; }
+trap cleanup EXIT INT TERM
+if [ -z "$WATCHMAN" ]; then
+    echo "[$(date)] ERROR: watchman not found" >> "$LOG"
+    exit 127
+fi
 echo "[$(date)] code-index-watcher starting (watching $WATCH_ROOT)" >> "$LOG"
 
 # Ensure TEI (embeddings backend) is up (indexer hard-fails if not)
@@ -33,15 +40,15 @@ fi
     echo "[$(date)] change detected — debouncing 60s" >> "$LOG"
     sleep 60
     # Skip if another run started during debounce (simple guard)
-    if [ -f /tmp/code-index-busy ]; then
+    if [ -f "$BUSY_FILE" ]; then
         echo "[$(date)] already running, skip" >> "$LOG"
         continue
     fi
-    touch /tmp/code-index-busy
+    (set -o noclobber; : > "$BUSY_FILE") 2>/dev/null || continue
     echo "[$(date)] running indexer --index" >> "$LOG"
     source "$VENV"
     cd "$SCRIPT_DIR"
-    python indexer.py --index >> "$LOG" 2>&1
-    rm -f /tmp/code-index-busy
+    python indexer.py --index >> "$LOG" 2>&1 || echo "[$(date)] indexer failed" >> "$LOG"
+    rm -f "$BUSY_FILE"
     echo "[$(date)] indexer done" >> "$LOG"
 done

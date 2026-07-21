@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """Second-Brain unified sync orchestrator.
 
-Runs ALL sources into the Obsidian vault (~/Developer/second-brain/) + chroma:
+Runs ALL sources into the configured Obsidian vault ($SECOND_BRAIN_DIR) + chroma:
   github/        — repos + READMEs (gh CLI) -> Nifty League/Projects + Personal/Projects
   apple-notes/   — Notes.app (osascript; blank notes auto-skipped) -> routed by folder/keyword
   documents/     — ~/Documents (PDF text via pdfplumber) -> Personal/Documents or Nifty League/Business
   Google Drive/Email/Calendar/Sheets (via google_sync.py API) -> routed by KEYWORD per file:
       pokemon/tcg/whatnot -> Pink Binder, nifty/nftl/crypto -> Nifty League, else -> Personal
-  nifty-docs/    — NiftyLeague business knowledge (sync_nifty_docs.py) -> Nifty League/Business
   hindsight/     — Hindsight observations (in System/Hermes/)
   memory-facts/  — Hermes memory facts + Hindsight (export_memories.py, in System/Hermes/)
 
@@ -16,32 +15,35 @@ CRITICAL SAFETY: route ALL destructive shell commands through ~/.hermes/guardian
 import os, re, glob, datetime, subprocess, shutil, time, json
 from pathlib import Path
 
-HERMES = Path(os.path.expanduser("~/.hermes"))
-VAULT = os.path.expanduser("~/Developer/second-brain")
+HERMES = Path(os.path.expanduser(os.environ.get("HERMES_HOME", "~/.hermes")))
+VAULT = os.path.expanduser(os.environ.get("SECOND_BRAIN_DIR", "~/second-brain"))
+WORK_SECTION = os.environ.get("WORK_SECTION", "Work")
+PERSONAL_SECTION = os.environ.get("PERSONAL_SECTION", "Personal")
+SPECIAL_SECTION = os.environ.get("SPECIAL_SECTION", "Special")
 CHROMA_DIR = HERMES / "second-brain-chroma"
 # Embedding backend: TEI (Qwen/Qwen3-Embedding-0.6B, 1024-dim) on http://localhost:6999/v1
 # Ollama is REMOVED (caused Jetsam crash 2026-07-19). Use TEI for all embeddings.
 EMBED_MODEL = "Qwen/Qwen3-Embedding-0.6B"
-TEI_EMBED_URL = "http://localhost:6999/v1/embeddings"
+TEI_EMBED_URL = os.environ.get("TEI_EMBED_URL", "http://127.0.0.1:6999/v1/embeddings")
 
 # source subdirs in vault
 DIRS = {
-    "github": os.path.join(VAULT, "Nifty League", "Projects"),
-    "notes": os.path.join(VAULT, "Personal", "Notes"),
-    "docs": os.path.join(VAULT, "Personal", "Documents"),
-    "personal-drive": os.path.join(VAULT, "Personal", "Drive"),
-    "nifty-drive": os.path.join(VAULT, "Nifty League", "Drive"),
-    "meetings": os.path.join(VAULT, "Nifty League", "Meetings"),
-    "nifty-docs": os.path.join(VAULT, "Nifty League", "Business"),
-    "calendar": os.path.join(VAULT, "Nifty League", "Calendar"),
-    "gmail": os.path.join(VAULT, "Nifty League", "Email"),
-    "sheets": os.path.join(VAULT, "Nifty League", "Sheets"),
+    "github": os.path.join(VAULT, WORK_SECTION, "Projects"),
+    "notes": os.path.join(VAULT, PERSONAL_SECTION, "Notes"),
+    "docs": os.path.join(VAULT, PERSONAL_SECTION, "Documents"),
+    "personal-drive": os.path.join(VAULT, PERSONAL_SECTION, "Drive"),
+    "nifty-drive": os.path.join(VAULT, WORK_SECTION, "Drive"),
+    "meetings": os.path.join(VAULT, WORK_SECTION, "Meetings"),
+    "nifty-docs": os.path.join(VAULT, WORK_SECTION, "Business"),
+    "calendar": os.path.join(VAULT, WORK_SECTION, "Calendar"),
+    "gmail": os.path.join(VAULT, WORK_SECTION, "Email"),
+    "sheets": os.path.join(VAULT, WORK_SECTION, "Sheets"),
     "hindsight": os.path.join(VAULT, "System", "Hermes", "hindsight"),
     "memory": os.path.join(VAULT, "System", "Hermes", "memory-facts"),
 }
 
-VAULT_PINK = Path(os.path.join(VAULT, "Pink Binder"))
-VAULT_NIFTY = Path(os.path.join(VAULT, "Nifty League"))
+VAULT_PINK = Path(os.path.join(VAULT, SPECIAL_SECTION))
+VAULT_NIFTY = Path(os.path.join(VAULT, WORK_SECTION))
 
 def log(m):
     print(f"[sync] {m}", flush=True)
@@ -205,11 +207,11 @@ def sync_github(col):
             import google_sync as _gs
             _route = _gs.route_text(name, "")
             if _route == "pink":
-                vdir = os.path.join(VAULT, "Pink Binder", "Projects")
+                vdir = os.path.join(VAULT, SPECIAL_SECTION, "Projects")
             elif owner == "NiftyLeague" or _route == "nifty":
-                vdir = os.path.join(VAULT, "Nifty League", "Projects")
+                vdir = os.path.join(VAULT, WORK_SECTION, "Projects")
             else:
-                vdir = os.path.join(VAULT, "Personal", "Projects")
+                vdir = os.path.join(VAULT, PERSONAL_SECTION, "Projects")
             # incremental: skip if already synced today
             safe = "".join(c for c in name if c.isalnum() or c in " -_.")[:60]
             existing = os.path.join(vdir, f"{safe}.md")
@@ -351,7 +353,7 @@ def extract_pdf(fp, max_chars=6000):
 
 def sync_documents(col):
     log("Local Documents: scanning + PDF extraction")
-    docs_root = os.path.expanduser("~/Documents")
+    docs_root = os.path.expanduser(os.environ.get("DOCUMENTS_DIR", "~/Documents"))
     exts = {".md", ".txt", ".pdf", ".docx", ".rtf", ".pages"}
     n = 0
     for root, dirs, files in os.walk(docs_root):
@@ -379,7 +381,7 @@ def sync_documents(col):
             # route by canonical rule: nifty -> Nifty League/Business, else Personal/Documents
             import google_sync as _gs
             _route = _gs.route_text(title, body[:3000])
-            _vdir = os.path.join(VAULT, "Nifty League", "Business") if _route == "nifty" else DIRS["docs"]
+            _vdir = os.path.join(VAULT, WORK_SECTION, "Business") if _route == "nifty" else DIRS["docs"]
             embed_and_store(col, "docs", title, body, vault_md=vault_md, vault_dir=_vdir)
             n += 1
             if n >= 200:
@@ -457,21 +459,6 @@ def sync_hindsight(col):
         log(f"  Hindsight skipped: {e}")
 
 
-# ---------- Nifty Docs (delegate) ----------
-def _sync_nifty_docs(col=None):
-    log("Nifty Docs: via sync_nifty_docs.py")
-    try:
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            "sync_nifty_docs", os.path.join(os.path.dirname(__file__), "sync_nifty_docs.py"))
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        mod.main()
-        log("  Nifty Docs: done")
-    except Exception as e:
-        log(f"  Nifty Docs errored: {e}")
-
-
 # ---------- Memory facts (delegate) ----------
 def _sync_memory_facts(col=None):
     log("Memory facts: via export_memories.py")
@@ -499,14 +486,18 @@ def _warm_model():
 
 def _pause_hindsight_daemon():
     subprocess.run(["launchctl", "unload",
-                    os.path.expanduser("~/Library/LaunchAgents/com.hermes.hindsight.plist")],
+                    os.path.expanduser(os.environ.get(
+                        "HERMES_LAUNCH_AGENTS_DIR", "~/Library/LaunchAgents")) +
+                    "/com.hermes.hindsight.plist"],
                    capture_output=True)
     subprocess.run(["pkill", "-f", "hindsight-api"], capture_output=True)
 
 
 def _resume_hindsight_daemon():
     subprocess.run(["launchctl", "load",
-                    os.path.expanduser("~/Library/LaunchAgents/com.hermes.hindsight.plist")],
+                    os.path.expanduser(os.environ.get(
+                        "HERMES_LAUNCH_AGENTS_DIR", "~/Library/LaunchAgents")) +
+                    "/com.hermes.hindsight.plist"],
                    capture_output=True)
 
 
@@ -563,33 +554,36 @@ def main():
     # ensure live symlinks (MEMORY.md, USER.md, skills/) always present
     _ensure_symlinks()
 
-    # pre-flight: ensure Ollama embed endpoint is alive (restart if wedged)
+    # Pre-flight the TEI endpoint before starting a potentially long sync.
     _ensure_tei()
 
     pause = args.source in (None, "github", "notes", "docs")
     if pause:
         _pause_hindsight_daemon()
 
-    col = get_col()
     sources = {
         "github": sync_github,
         "notes": sync_apple_notes,
         "docs": sync_documents,
         "drive": sync_google_drive,
         "hindsight": sync_hindsight,
-        "nifty-docs": _sync_nifty_docs,
         "memory": _sync_memory_facts,
     }
-    if args.source:
-        sources.get(args.source, lambda c: log("unknown source"))(col)
-    else:
-        for name, fn in sources.items():
-            try:
-                fn(col)
-            except Exception as e:
-                log(f"  {name} errored: {e}")
-    if pause:
-        _resume_hindsight_daemon()
+    try:
+        col = get_col()
+        if args.source:
+            if args.source not in sources:
+                raise SystemExit(f"unknown source: {args.source}")
+            sources[args.source](col)
+        else:
+            for name, fn in sources.items():
+                try:
+                    fn(col)
+                except Exception as e:
+                    log(f"  {name} errored: {e}")
+    finally:
+        if pause:
+            _resume_hindsight_daemon()
     log("SYNC DONE")
 
 
