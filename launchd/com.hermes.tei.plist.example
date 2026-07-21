@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.hermes.tei</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <!-- Replace $HOME with your actual home directory path -->
+        <string>$HOME/.hermes/scripts/tei-launch.sh</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <key>ExitTimeOut</key>
+    <integer>15</integer>
+
+    <!-- Replace $HOME with your actual home directory path -->
+    <key>StandardOutPath</key>
+    <string>$HOME/.hermes/logs/tei.log</string>
+    <key>StandardErrorPath</key>
+    <string>$HOME/.hermes/logs/tei.log</string>
+
+    <!-- TEI needs ~45s to warm up Metal on Apple Silicon before serving requests.
+         Both Hindsight and the code-indexer depend on this endpoint. -->
+    <key>LaunchOnlyOnce</key>
+    <false/>
+</dict>
+</plist>

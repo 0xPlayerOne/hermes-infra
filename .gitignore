@@ -1,0 +1,39 @@
+# === SECRETS / KEYS ===
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+service-account*.json
+
+# === RUNTIME DATA (never commit) ===
+code-index/chroma/
+code-index/manifest.json
+code-index/watcher-state.json
+second-brain/chroma/
+second-brain/vault/
+second-brain/synthesis-log.md
+
+# === VENVS ===
+code-index-venv/
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# === LAUNCHD (user-specific paths) ===
+launchd/*.plist
+!launchd/*.plist.example
+
+# === HERMES INTERNAL STATE ===
+.hermes/
+*.db
+*.db-shm
+*.db-wal
+*.lock
+state.db
+
+# === OS ===
+.DS_Store
+Thumbs.db

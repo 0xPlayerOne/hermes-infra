@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HINDSIGHT_API_EMBEDDINGS_DIM</key>
+        <string>1024</string>
+        <key>HINDSIGHT_API_EMBEDDINGS_OPENAI_API_KEY</key>
+        <string>tei</string>
+        <key>HINDSIGHT_API_EMBEDDINGS_OPENAI_BASE_URL</key>
+        <string>http://localhost:6999/v1</string>
+        <key>HINDSIGHT_API_EMBEDDINGS_OPENAI_MODEL</key>
+        <string>Qwen/Qwen3-Embedding-0.6B</string>
+        <key>HINDSIGHT_API_EMBEDDINGS_PROVIDER</key>
+        <string>openai</string>
+        <key>HINDSIGHT_API_LLM_API_KEY</key>
+        <!-- Replace with your OpenRouter API key -->
+        <string>your-openrouter-api-key-here</string>
+        <key>HINDSIGHT_API_LLM_BASE_URL</key>
+        <string>https://openrouter.ai/api/v1</string>
+        <key>HINDSIGHT_API_LLM_MODEL</key>
+        <string>openrouter/free</string>
+        <key>HINDSIGHT_API_LLM_PROVIDER</key>
+        <string>openai</string>
+        <key>HINDSIGHT_API_LLM_STRICT_SCHEMA</key>
+        <string>false</string>
+        <key>HINDSIGHT_API_RERANKER_PROVIDER</key>
+        <string>rrf</string>
+        <key>HINDSIGHT_PROFILE</key>
+        <string>hermes</string>
+    </dict>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>Label</key>
+    <string>com.hermes.hindsight</string>
+    <key>LaunchOnlyOnce</key>
+    <false/>
+    <key>ProgramArguments</key>
+    <array>
+        <!-- Replace $HOME with your actual home directory path -->
+        <string>$HOME/.hermes/hermes-agent/venv/bin/hindsight-api</string>
+        <string>--host</string>
+        <string>127.0.0.1</string>
+        <string>--port</string>
+        <string>9177</string>
+        <string>--log-level</string>
+        <string>info</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardErrorPath</key>
+    <string>$HOME/.hermes/logs/hindsight-api.log</string>
+    <key>StandardOutPath</key>
+    <string>$HOME/.hermes/logs/hindsight-api.log</string>
+    <key>WorkingDirectory</key>
+    <string>$HOME/.hermes/hindsight</string>
+</dict>
+</plist>

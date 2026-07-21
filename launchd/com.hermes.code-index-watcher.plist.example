@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.hermes.code-index-watcher</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <!-- Replace $HOME with your actual home directory path -->
+        <string>$HOME/.hermes/scripts/code-index-watch.sh</string>
+    </array>
+
+    <!-- Replace $HOME with your actual home directory path -->
+    <key>WorkingDirectory</key>
+    <string>$HOME/.hermes/code-index</string>
+
+    <key>StandardOutPath</key>
+    <string>$HOME/.hermes/logs/code-index-watch.log</string>
+    <key>StandardErrorPath</key>
+    <string>$HOME/.hermes/logs/code-index-watch.log</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+</dict>
+</plist>

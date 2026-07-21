@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+"""Second-Brain Exporter — mirrors Hermes' database-backed memories into the
+Obsidian vault as markdown, so everything is visualizable.
+
+What it exports:
+  - memory-tool facts  -> System/Hermes/memory-facts/<n>.md
+  - Hindsight observations -> System/Hermes/hindsight/<id>.md
+
+Live markdown (MEMORY.md, USER.md, skills/) are SYMLINKED — not exported.
+
+Run: python export_memories.py
+Cron: wire to daily run after the code-indexer.
+"""
+import os, json, subprocess, datetime, glob
+
+VAULT = os.path.expanduser("~/Developer/second-brain")
+HERMES_DIR = os.path.join(VAULT, "System", "Hermes")
+MEM_FACTS_DIR = os.path.join(HERMES_DIR, "memory-facts")
+HINDSIGHT_DIR = os.path.join(HERMES_DIR, "hindsight")
+
+
+def write_vault_file(path, content):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        f.write(content)
+    os.replace(tmp, path)
+
+
+def export_memory_facts():
+    """Dump the `memory` tool store into individual markdown files."""
+    os.makedirs(MEM_FACTS_DIR, exist_ok=True)
+    mem_root = os.path.expanduser("~/.hermes/memory")
+    count = 0
+    if os.path.isdir(mem_root):
+        for f in glob.glob(os.path.join(mem_root, "*.json")):
+            try:
+                data = json.load(open(f))
+            except Exception:
+                continue
+            entries = data if isinstance(data, list) else [data]
+            for i, e in enumerate(entries):
+                content = e.get("content") if isinstance(e, dict) else str(e)
+                target = e.get("target", "general") if isinstance(e, dict) else "general"
+                fn = os.path.join(MEM_FACTS_DIR, f"{os.path.basename(f).replace('.json','')}-{i}.md")
+                with open(fn, "w") as out:
+                    out.write(f"---\ntype: memory-fact\ntarget: {target}\nsource: hermes-memory-tool\ndate: {datetime.date.today()}\n---\n\n{content}\n")
+                count += 1
+    return count
+
+
+def export_hindsight():
+    """Export Hindsight observations from the local daemon as markdown."""
+    os.makedirs(HINDSIGHT_DIR, exist_ok=True)
+    try:
+        import urllib.request
+        req = urllib.request.Request("http://127.0.0.1:9177/memories?limit=200")
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read().decode())
+        obs = data if isinstance(data, list) else data.get("memories", [])
+        n = 0
+        for o in obs:
+            oid = o.get("id") or o.get("oid") or f"h{n}"
+            text = o.get("content") or o.get("text") or o.get("observation") or ""
+            if not text.strip():
+                continue
+            fn = os.path.join(HINDSIGHT_DIR, f"{oid}.md")
+            with open(fn, "w") as out:
+                out.write(f"---\ntype: hindsight-observation\nid: {oid}\ndate: {datetime.date.today()}\n---\n\n{text}\n")
+            n += 1
+        return n
+    except Exception as e:
+        with open(os.path.join(HINDSIGHT_DIR, "_STATUS.md"), "w") as out:
+            out.write(f"Hindsight export skipped: {type(e).__name__}: {e}\n")
+        return 0
+
+
+def write_dashboard(mf, hs):
+    dash = os.path.join(VAULT, "DASHBOARD.md")
+    # dynamic counts from the vault
+    def cnt(sub):
+        d = os.path.join(VAULT, sub)
+        return len(glob.glob(os.path.join(d, "*.md"))) if os.path.isdir(d) else 0
+    sources = [
+        ("Nifty League/Calendar/", "Google Calendar — work"),
+        ("Personal/Calendar/", "Google Calendar — personal"),
+        ("Nifty League/Email/", "Gmail — work"),
+        ("Personal/Email/", "Gmail — personal"),
+        ("Nifty League/Sheets/", "Google Sheets — work"),
+        ("Personal/Sheets/", "Google Sheets — personal"),
+        ("Nifty League/Drive/", "Google Drive — work"),
+        ("Personal/Drive/", "Google Drive — personal"),
+        ("Nifty League/Meetings/", "Google Meet / call transcripts — work"),
+        ("Personal/Meetings/", "Google Meet / call transcripts — personal"),
+        ("Nifty League/Projects/", "NiftyLeague repos + READMEs (`languages:` tagged)"),
+        ("Personal/Projects/", "User repos + READMEs (`languages:` tagged)"),
+        ("Nifty League/Business/", "NiftyLeague business knowledge (nifty-docs)"),
+        ("Pink Binder/Sheets/", "Pokémon / TCG sheets (any account)"),
+        ("Pink Binder/Notes/", "Pokémon / TCG notes (any account)"),
+        ("Personal/Notes/", "Apple Notes (osascript)"),
+        ("Personal/Documents/", "Local Documents (PDF text)"),
+    ]
+    src_lines = "\n".join(f"- `{s}` — {desc}: **{cnt(s)}** files" for s, desc in sources)
+    with open(dash, "w") as out:
+        out.write(f"""# 🧠 Second Brain — Dashboard
+
+_Generated {datetime.datetime.now().isoformat()}_
+
+## Live (symlinked, always current) — in `System/Hermes/`
+- [[System/Hermes/MEMORY]] — agent environment + conventions
+- [[System/Hermes/USER]] — who you are
+- [[System/Hermes/SOUL]] — agent identity / persona
+- [[System/Hermes/skills]] — reusable procedures (folder)
+
+## Agent meta — `System/Hermes/`
+- `System/Hermes/hindsight/` — Hindsight observations: **{hs}** files
+- `System/Hermes/memory-facts/` — memory-tool facts: **{mf}** files
+- Sync scripts: `sync.py`, `google_sync.py`, `sync_nifty_docs.py`, `export_memories.py`
+- Architecture: [[System/Assistant/architecture]] — how the pipeline works
+
+## Synced data sources
+{src_lines}
+
+## Vault structure (PARA)
+- `Daily/` — daily notes (YYYY-MM-DD.md, append-only)
+- `System/Assistant/` — `context.md`, `preferences.md`, `environment.md`, `logs/issues-fixes-log.md`
+- `People/` — contacts, relationships, MOC ([[People/Andrew]])
+- `Inbox/` — unclassified incoming (file later)
+- `Nifty League/` — **work**: Calendar/, Email/, Sheets/, Drive/, Meetings/, Projects/ (NiftyLeague repos), Business/ (nifty-docs)
+- `Personal/` — **personal**: Calendar/, Email/, Sheets/, Drive/, Meetings/, Projects/ (user repos), Notes/ (apple-notes), Documents/
+- `Pink Binder/` — Pokémon / TCG content (any account): Sheets/, Notes/, Drive/, Projects/
+- `System/Hermes/` — agent meta (symlinks + sync scripts + hindsight/memory-facts)
+- Account mapping: **work account → Nifty League**, **personal account → Personal**. Pokémon → Pink Binder regardless of account. Nifty League content → Nifty League folder.
+
+## How to use
+1. Open this vault in Obsidian.
+2. Use **Graph View** to see connections between memories, skills, repos, meetings, people.
+3. Daily cron (`Second-Brain Sync` @ 4:40am) re-runs `System/Hermes/sync.py` incrementally.
+4. `export_memories.py` regenerates this dashboard + hindsight/memory-facts.
+5. MEMORY.md / USER.md / SOUL.md / skills are live symlinks — edit in Hermes or here.
+6. Log operational events to `Daily/YYYY-MM-DD.md` ## Log; technical fixes to `System/Assistant/logs/issues-fixes-log.md`.
+
+## Architecture
+```
+hermes/
+  MEMORY.md ──┐
+  USER.md   ──┼─ (symlinked, live)
+  SOUL.md   ──┘
+  skills/       (symlinked, live)
+  Nifty League/   Personal/   Pink Binder/   (each: Calendar Email Sheets Drive Meetings Notes Projects Documents [Business for Nifty])
+  People/  System/  Daily/
+  System/Hermes/  ── sync scripts + agent meta (MEMORY/USER/SOUL/skills symlinks, hindsight/, memory-facts/)
+  Sync scripts in System/Hermes/: sync.py + google_sync.py + sync_nifty_docs.py + export_memories.py + rebuild_chroma.py
+  Data sources (incremental): github/ apple-notes/ documents/ nifty-drive(personal-drive)/ calendar/ gmail/ sheets/ nifty-docs/
+  └─ (routed into Nifty League/ Personal/ Pink Binder/ sections by account + content)
+```
+""")
+
+
+if __name__ == "__main__":
+    mf = export_memory_facts()
+    hs = export_hindsight()
+    write_dashboard(mf, hs)
+    print(f"exported: memory-facts={mf} hindsight={hs}")
