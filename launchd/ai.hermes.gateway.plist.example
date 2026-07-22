@@ -7,7 +7,7 @@
         <key>HERMES_HOME</key>
         <string>/path/to/.hermes</string>
         <key>PATH</key>
-        <string>/path/to/.hermes/hermes-agent/venv/bin:/path/to/.hermes/hermes-agent/node_modules/.bin:/path/to/.hermes/node/bin:/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin:/opt/homebrew/sbin</string>
+        <string>/path/to/.hermes/hermes-agent/venv/bin:/path/to/.hermes/hermes-agent/node_modules/.bin:/path/to/.hermes/node/bin:/path/to/.cargo/bin:/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin:/opt/homebrew/sbin</string>
         <key>VIRTUAL_ENV</key>
         <string>/path/to/.hermes/hermes-agent/venv</string>
     </dict>

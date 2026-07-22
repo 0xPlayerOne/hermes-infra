@@ -121,6 +121,9 @@ hermes-infra/
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo llvm-cov --summary-only
+
+# launchd: detect drift between repo templates and active jobs
+"$HERMES_INFRA_VENV/bin/python" "$HERMES_INFRA_DIR/scripts/install_launchd.py" --check
 ```
 
 CI enforces at least 80% Python line coverage and 50% Rust line coverage. Rust's remaining uncovered lines are primarily non-returning process supervisors and launchd/Watchman integration branches, which are validated against the live macOS services.

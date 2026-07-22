@@ -14,6 +14,7 @@ This repository is the source of truth for Hermes infrastructure implementations
 - Cron prompt templates: `cron/`
 - launchd templates: `launchd/`
 - Hermes gateway launchd template: `launchd/ai.hermes.gateway.plist.example`
+- Launchd reconciliation: `"$HERMES_INFRA_VENV/bin/python" "$HERMES_INFRA_DIR/scripts/install_launchd.py" --check`
 
 Global Hermes paths are compatibility links or runtime state only:
 
@@ -34,6 +35,8 @@ curl -fsS http://127.0.0.1:9177/health
 ```
 
 Do not edit implementation files in `~/.hermes` or the second-brain vault. Update this repository and reload the affected launchd service.
+
+Use `install_launchd.py --check` to detect drift. Use `--install` only after reviewing the rendered changes; it writes machine-local plists under `$HERMES_LAUNCH_AGENTS_DIR` and bootstraps them with launchd.
 
 Python dependencies are intentionally split because ChromaDB 0.5.23 and Hindsight 0.8.4 require incompatible `tokenizers` versions:
 
