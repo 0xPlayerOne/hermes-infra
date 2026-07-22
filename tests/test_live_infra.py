@@ -6,14 +6,16 @@ import urllib.request
 
 import pytest
 
-
 pytestmark = pytest.mark.live
 
 
 def launchd_details(label):
     return subprocess.run(
         ["launchctl", "print", f"gui/{os.getuid()}/{label}"],
-        capture_output=True, text=True, check=True).stdout
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
 
 
 def pid_for(label):
@@ -38,7 +40,9 @@ def test_tei_is_local_and_serves_embeddings():
     request = urllib.request.Request(
         "http://127.0.0.1:6999/v1/embeddings",
         data=json.dumps({"model": "Qwen/Qwen3-Embedding-0.6B", "input": ["live test"]}).encode(),
-        headers={"Content-Type": "application/json"}, method="POST")
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
     with urllib.request.urlopen(request, timeout=20) as response:
         data = json.loads(response.read())
     assert len(data["data"][0]["embedding"]) == 1024
@@ -59,6 +63,9 @@ def test_indexer_status_uses_repo_environment():
     result = subprocess.run(
         [os.path.join(venv, "bin/python"), os.path.join(root, "code-index/indexer.py"), "--status"],
         env={**os.environ, "HERMES_INFRA_DIR": root},
-        capture_output=True, text=True, check=True)
+        capture_output=True,
+        text=True,
+        check=True,
+    )
     assert "Model: Qwen/Qwen3-Embedding-0.6B" in result.stdout
     assert "Total chunks in store:" in result.stdout

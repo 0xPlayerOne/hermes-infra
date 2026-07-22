@@ -12,3 +12,53 @@ omit = ["tests/*"]
 show_missing = true
 skip_covered = true
 exclude_also = ["if __name__ == .__main__.:"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+exclude = [".venv", ".hindsight-venv", "target"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.pylint.main]
+py-version = "3.11"
+ignore = [".venv", ".hindsight-venv", "target"]
+jobs = 1
+
+[tool.pylint.messages_control]
+disable = [
+  "duplicate-code",
+  "fixme",
+  "import-error",
+  "invalid-name",
+  "missing-class-docstring",
+  "missing-function-docstring",
+  "missing-module-docstring",
+  "no-member",
+  "attribute-defined-outside-init",
+  "broad-exception-caught",
+  "consider-using-with",
+  "global-statement",
+  "import-outside-toplevel",
+  "line-too-long",
+  "protected-access",
+  "redefined-builtin",
+  "redefined-outer-name",
+  "reimported",
+  "subprocess-run-check",
+  "too-few-public-methods",
+  "too-many-arguments",
+  "too-many-branches",
+  "too-many-locals",
+  "too-many-nested-blocks",
+  "too-many-positional-arguments",
+  "too-many-return-statements",
+  "too-many-statements",
+  "unnecessary-lambda",
+  "unused-argument",
+]
+
+[tool.pylint.format]
+max-line-length = 100

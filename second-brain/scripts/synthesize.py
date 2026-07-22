@@ -21,7 +21,13 @@ Run with the repository environment loaded:
 
 Cron: Sunday nights.
 """
-import os, re, json, glob, datetime, urllib.request
+
+import datetime
+import glob
+import json
+import os
+import re
+import urllib.request
 
 HERMES = os.path.expanduser(os.environ.get("HERMES_HOME", "~/.hermes"))
 STATE_DB = os.path.join(HERMES, "state.db")
@@ -35,40 +41,76 @@ LOOKBACK_DAYS = 7
 
 # Lines that indicate a message is agent-injected boilerplate, not user intent.
 INJECT_MARKERS = (
-    "[IMPORTANT", "[Triggering", "[Replying to", "[OUT-OF-BAND",
-    "[Background process", "You just executed tool calls", "Session restored",
-    "✨ Session reset", "yo 👋 what's good",
+    "[IMPORTANT",
+    "[Triggering",
+    "[Replying to",
+    "[OUT-OF-BAND",
+    "[Background process",
+    "You just executed tool calls",
+    "Session restored",
+    "✨ Session reset",
+    "yo 👋 what's good",
 )
 
 # High-confidence patterns. Each must capture a COMPLETE, sensible directive.
 # Anchored at start of a (cleaned) user line to avoid mid-list fragments.
 PATTERNS = [
     # never commit env files (explicit guard)
-    (r"^\s*never\s+commit\s+([\w./-]+(?:\s+files?)?)",
-     lambda m: f"GUARD: Never commit {m.group(1).strip()}. Enforce in git hooks / agent guardrails.", USER_MD),
+    (
+        r"^\s*never\s+commit\s+([\w./-]+(?:\s+files?)?)",
+        lambda m: (
+            f"GUARD: Never commit {m.group(1).strip()}. Enforce in git hooks / agent guardrails."
+        ),
+        USER_MD,
+    ),
     # remove X ... unnecessary / we don't need
-    (r"^\s*remove\s+([\w./-]+(?:\s+and\s+[\w./-]+)*)\b.*?(unnecessary|not needed|we (?:already|don'?t)|no longer)",
-     lambda m: f"CONV-CLEANUP: Remove {m.group(1).strip()} — unnecessary per user.", MEMORY_MD),
+    (
+        r"^\s*remove\s+([\w./-]+(?:\s+and\s+[\w./-]+)*)\b.*?(unnecessary|not needed|we (?:already|don'?t)|no longer)",
+        lambda m: f"CONV-CLEANUP: Remove {m.group(1).strip()} — unnecessary per user.",
+        MEMORY_MD,
+    ),
     # replace old references of X with Y
-    (r"^\s*(?:yeah\s+)?any\s+old\s+references?\s+(?:of\s+)?(?:to\s+)?([\w/-]+)\s+should\s+be\s+(?:replaced|removed)",
-     lambda m: f"CONV-NAMING: Replace stale '{m.group(1)}' references (user-directed cleanup).", MEMORY_MD),
+    (
+        r"^\s*(?:yeah\s+)?any\s+old\s+references?\s+(?:of\s+)?(?:to\s+)?([\w/-]+)\s+should\s+be\s+(?:replaced|removed)",
+        lambda m: f"CONV-NAMING: Replace stale '{m.group(1)}' references (user-directed cleanup).",
+        MEMORY_MD,
+    ),
     # delete the clone / we already have one
-    (r"^\s*(delete the clone|we already have (?:one|this|that))",
-     lambda m: "PREFERENCE-NODEDUP: Do NOT create duplicate repo clones — check the configured source root first; remove redundant clones.", USER_MD),
+    (
+        r"^\s*(delete the clone|we already have (?:one|this|that))",
+        lambda m: (
+            "PREFERENCE-NODEDUP: Do NOT create duplicate repo clones — check the configured source root first; remove redundant clones."
+        ),
+        USER_MD,
+    ),
     # explicit model/LLM direction
-    (r"^\s*(?:if\s+[\w]+\s+needs\s+an\s+llm|point\s+it\s+at|use|try)\b.*?\b(kilo[ -]?auto[/-]?free|kilo\s+free|hy3|qwen3?[- ]?embedding[\w./:-]*|tei|ollama)\b",
-     lambda m: f"DECISION-MODEL: User directed embedding/LLM to use '{m.group(1)}' where applicable.", MEMORY_MD),
+    (
+        r"^\s*(?:if\s+[\w]+\s+needs\s+an\s+llm|point\s+it\s+at|use|try)\b.*?\b(kilo[ -]?auto[/-]?free|kilo\s+free|hy3|qwen3?[- ]?embedding[\w./:-]*|tei|ollama)\b",
+        lambda m: (
+            f"DECISION-MODEL: User directed embedding/LLM to use '{m.group(1)}' where applicable."
+        ),
+        MEMORY_MD,
+    ),
     # keep working to get TEI metal working
-    (r"^\s*keep\s+working\s+to\s+get\s+(tei|[\w]+)\s+metal\s+working",
-     lambda m: "INFRA-DIR: Push TEI (Qwen3-Embedding on Metal) to work flawlessly on Apple Silicon — failures are config, not hardware.", MEMORY_MD),
+    (
+        r"^\s*keep\s+working\s+to\s+get\s+(tei|[\w]+)\s+metal\s+working",
+        lambda m: (
+            "INFRA-DIR: Push TEI (Qwen3-Embedding on Metal) to work flawlessly on Apple Silicon — failures are config, not hardware."
+        ),
+        MEMORY_MD,
+    ),
     # explicit first-person preference
-    (r"^\s*i\s+prefer\s+(.{5,140}?)(?:[.\n]|$)",
-     lambda m: f"PREFERENCE: {m.group(1).strip().capitalize()}.", USER_MD),
+    (
+        r"^\s*i\s+prefer\s+(.{5,140}?)(?:[.\n]|$)",
+        lambda m: f"PREFERENCE: {m.group(1).strip().capitalize()}.",
+        USER_MD,
+    ),
 ]
 
 
 def get_recent_user_messages():
     import sqlite3
+
     if not os.path.exists(STATE_DB):
         return []
     cutoff = datetime.datetime.utcnow().timestamp() - LOOKBACK_DAYS * 86400
@@ -163,13 +205,16 @@ def write_memory_fact_file(fact):
         fn = fn.replace(".md", f"-{n}.md")
         n += 1
     with open(fn, "w", encoding="utf-8") as output:
-        output.write(f"---\ntype: memory-fact\nsource: weekly-synthesis\ndate: {datetime.date.today()}\n---\n\n{fact}\n")
+        output.write(
+            f"---\ntype: memory-fact\nsource: weekly-synthesis\ndate: {datetime.date.today()}\n---\n\n{fact}\n"
+        )
 
 
 def queue_hindsight(fact):
     payload = json.dumps({"content": fact, "type": "observation"}).encode()
-    req = urllib.request.Request(HINDSIGHT_URL, data=payload,
-                                 headers={"Content-Type": "application/json"}, method="POST")
+    req = urllib.request.Request(
+        HINDSIGHT_URL, data=payload, headers={"Content-Type": "application/json"}, method="POST"
+    )
     try:
         with urllib.request.urlopen(req, timeout=5) as r:
             return r.status in (200, 201)
@@ -183,7 +228,7 @@ def main():
     existing = load_existing_facts()
 
     new_facts = []
-    for fact, target, src in candidates:
+    for fact, target, _src in candidates:
         if is_new(fact, existing):
             new_facts.append((fact, target))
             existing.add(re.sub(r"\s+", " ", fact).strip().lower()[:120])

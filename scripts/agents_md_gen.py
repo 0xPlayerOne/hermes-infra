@@ -10,6 +10,7 @@ Usage:
   agents_md_gen.py <repo_path> --body <file|'-'> [--force]
   cat body.md | agents_md_gen.py /path/to/repo --body -
 """
+
 import sys
 from pathlib import Path
 
@@ -29,6 +30,7 @@ PREAMBLE = """# AGENTS.md
 ---
 """
 
+
 def main():
     args = sys.argv[1:]
     force = "--force" in args
@@ -37,11 +39,8 @@ def main():
     if "--body" in args:
         i = args.index("--body")
         body_src = args[i + 1]
-        args = args[:i] + args[i + 2:]
-        if body_src == "-":
-            body = sys.stdin.read()
-        else:
-            body = Path(body_src).read_text()
+        args = args[:i] + args[i + 2 :]
+        body = sys.stdin.read() if body_src == "-" else Path(body_src).read_text(encoding="utf-8")
     if not args:
         print("usage: agents_md_gen.py <repo_path> --body <file|'-'> [--force]", file=sys.stderr)
         sys.exit(1)
@@ -59,6 +58,7 @@ def main():
     content = PREAMBLE + "\n" + body.strip() + "\n"
     out.write_text(content)
     print(f"WROTE: {out}  ({len(content)} bytes)")
+
 
 if __name__ == "__main__":
     main()

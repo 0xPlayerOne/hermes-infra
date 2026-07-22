@@ -1,3 +1,6 @@
 coverage==7.10.7
+pre-commit==4.3.0
+pylint==3.3.8
 pytest==9.0.3
 pytest-cov==6.3.0
+ruff==0.15.22

@@ -77,7 +77,9 @@ def test_find_git_repos_prunes_nested_and_hidden(load_script, tmp_path):
     (tmp_path / "two").mkdir()
     (tmp_path / "two" / ".git").write_text("gitdir: elsewhere", encoding="utf-8")
     assert indexer.find_git_repos(tmp_path) == [
-        (tmp_path / "one", "one"), (tmp_path / "two", "two")]
+        (tmp_path / "one", "one"),
+        (tmp_path / "two", "two"),
+    ]
 
 
 def test_file_hash(load_script, tmp_path):
@@ -100,8 +102,14 @@ def test_chunk_text_empty_overlap_and_minified(load_script, monkeypatch):
 
 @pytest.mark.parametrize(
     ("filename", "language"),
-    [("a.ts", "typescript"), ("a.py", "python"), ("a.rs", "rust"),
-     ("a.yaml", "yaml"), ("a.cs", "csharp"), ("README", "other")],
+    [
+        ("a.ts", "typescript"),
+        ("a.py", "python"),
+        ("a.rs", "rust"),
+        ("a.yaml", "yaml"),
+        ("a.cs", "csharp"),
+        ("README", "other"),
+    ],
 )
 def test_lang_for(load_script, filename, language):
     assert module(load_script).lang_for(Path(filename)) == language
@@ -168,7 +176,9 @@ def test_embed_batch_success_and_failure(load_script, monkeypatch):
     indexer = module(load_script)
     monkeypatch.setattr(indexer, "EMBED_BATCH", 2)
     monkeypatch.setattr(indexer, "EMBED_BATCH_DELAY", 0)
-    monkeypatch.setattr(indexer, "_embed_with_timeout", lambda client, batch: [[len(x)] for x in batch])
+    monkeypatch.setattr(
+        indexer, "_embed_with_timeout", lambda client, batch: [[len(x)] for x in batch]
+    )
     assert indexer.embed_batch(object(), ["a", "bb", "ccc"]) == [[1], [2], [3]]
 
     def fail(client, batch):
@@ -191,9 +201,11 @@ def test_embed_timeout_and_upsert_helpers(load_script):
             self.kwargs = kwargs
 
     assert indexer.timeout_upsert(Collection(), ["id"], ["doc"], [[1]], [{}], limit=1)
+
     class Broken:
         def upsert(self, **kwargs):
             raise RuntimeError("bad")
+
     assert not indexer.timeout_upsert(Broken(), [], [], [], [], limit=1)
 
 
@@ -210,6 +222,7 @@ def test_cmd_index_full_incremental_and_reindex(load_script, tmp_path, monkeypat
 
     class Collection:
         pass
+
     collection = Collection()
     chroma = SimpleNamespace(get_or_create_collection=lambda **kwargs: collection)
     monkeypatch.setattr(indexer, "load_state", lambda: state)
@@ -239,17 +252,24 @@ def test_cmd_status_and_query(load_script, monkeypatch, capsys):
         count=lambda: 3,
         query=lambda **kwargs: {
             "documents": [["document"]],
-            "metadatas": [[{"repo": "repo", "path": "main.py", "chunk": 0,
-                              "n_chunks": 1, "lang": "python"}]],
+            "metadatas": [
+                [{"repo": "repo", "path": "main.py", "chunk": 0, "n_chunks": 1, "lang": "python"}]
+            ],
             "distances": [[0.1]],
         },
     )
     chroma = SimpleNamespace(get_collection=lambda name: collection)
     monkeypatch.setattr(indexer, "get_chroma", lambda: chroma)
-    monkeypatch.setattr(indexer, "load_state", lambda: {
-        "model": indexer.MODEL, "repos": {"repo": {"files": {"main.py": "hash"}}}})
-    monkeypatch.setattr(indexer, "get_client", lambda: SimpleNamespace(
-        embed=lambda **kwargs: {"embeddings": [[1.0]]}))
+    monkeypatch.setattr(
+        indexer,
+        "load_state",
+        lambda: {"model": indexer.MODEL, "repos": {"repo": {"files": {"main.py": "hash"}}}},
+    )
+    monkeypatch.setattr(
+        indexer,
+        "get_client",
+        lambda: SimpleNamespace(embed=lambda **kwargs: {"embeddings": [[1.0]]}),
+    )
     indexer.cmd_status()
     indexer.cmd_query("query", repo="repo", n=1)
     output = capsys.readouterr().out

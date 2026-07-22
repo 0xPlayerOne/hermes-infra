@@ -118,6 +118,7 @@ fn hindsight_config() -> Result<HashMap<String, String>> {
         .unwrap_or_else(|| "~/.hermes".into());
     let hermes_home = expand_path(&hermes_home, &values);
     load_env_file(&hermes_home.join(".env"), &mut values)?;
+    load_hindsight_json_config(&hermes_home.join("hindsight/config.json"), &mut values)?;
     let secret_file = values
         .get("HINDSIGHT_SECRET_ENV_FILE")
         .map(|path| expand_path(path, &values))
@@ -127,6 +128,26 @@ fn hindsight_config() -> Result<HashMap<String, String>> {
         values.insert(key, value);
     }
     Ok(values)
+}
+
+fn load_hindsight_json_config(path: &Path, values: &mut HashMap<String, String>) -> Result<()> {
+    if !path.exists() {
+        return Ok(());
+    }
+    let object: Value = serde_json::from_str(&fs::read_to_string(path)?)?;
+    let Some(object) = object.as_object() else {
+        return Ok(());
+    };
+    for (source, target) in [
+        ("llm_provider", "HINDSIGHT_API_LLM_PROVIDER"),
+        ("llm_base_url", "HINDSIGHT_API_LLM_BASE_URL"),
+        ("llm_model", "HINDSIGHT_API_LLM_MODEL"),
+    ] {
+        if let Some(value) = object.get(source).and_then(Value::as_str) {
+            values.entry(target.into()).or_insert_with(|| value.into());
+        }
+    }
+    Ok(())
 }
 
 fn value(values: &HashMap<String, String>, key: &str, default: &str) -> String {
@@ -412,23 +433,21 @@ fn run_hindsight() -> Result<()> {
     let port = value(&values, "HINDSIGHT_API_PORT", "9177");
     let log_level = value(&values, "HINDSIGHT_API_LOG_LEVEL", "info");
 
-    values.insert(
-        "HINDSIGHT_API_LLM_PROVIDER".into(),
-        value(&values, "HINDSIGHT_API_LLM_PROVIDER", "openai"),
-    );
+    let llm_provider = value(&values, "HINDSIGHT_API_LLM_PROVIDER", "openai");
+    let llm_base_url = values
+        .get("HINDSIGHT_API_LLM_BASE_URL")
+        .filter(|value| !value.is_empty())
+        .ok_or("HINDSIGHT_API_LLM_BASE_URL is not configured")?
+        .clone();
+    let llm_model = values
+        .get("HINDSIGHT_API_LLM_MODEL")
+        .filter(|value| !value.is_empty())
+        .ok_or("HINDSIGHT_API_LLM_MODEL is not configured")?
+        .clone();
+    values.insert("HINDSIGHT_API_LLM_PROVIDER".into(), llm_provider);
     values.insert("HINDSIGHT_API_LLM_API_KEY".into(), key);
-    values.insert(
-        "HINDSIGHT_API_LLM_BASE_URL".into(),
-        value(
-            &values,
-            "HINDSIGHT_API_LLM_BASE_URL",
-            "https://openrouter.ai/api/v1",
-        ),
-    );
-    values.insert(
-        "HINDSIGHT_API_LLM_MODEL".into(),
-        value(&values, "HINDSIGHT_API_LLM_MODEL", "openrouter/free"),
-    );
+    values.insert("HINDSIGHT_API_LLM_BASE_URL".into(), llm_base_url);
+    values.insert("HINDSIGHT_API_LLM_MODEL".into(), llm_model);
     values.insert(
         "HINDSIGHT_API_LLM_STRICT_SCHEMA".into(),
         value(&values, "HINDSIGHT_API_LLM_STRICT_SCHEMA", "false"),
@@ -694,6 +713,34 @@ mod tests {
         assert_eq!(values.get("OVERRIDE").map(String::as_str), Some("process"));
         assert_eq!(values.get("PROCESS_ONLY").map(String::as_str), Some("yes"));
         fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn loads_hindsight_provider_settings_without_overriding_environment() {
+        let path = temp_path("hindsight-config");
+        fs::write(
+            &path,
+            r#"{
+                "llm_provider": "openai",
+                "llm_base_url": "https://provider.example/v1",
+                "llm_model": "structured-chat"
+            }"#,
+        )
+        .unwrap();
+        let mut values = HashMap::from([(
+            "HINDSIGHT_API_LLM_MODEL".to_string(),
+            "environment-model".to_string(),
+        )]);
+        load_hindsight_json_config(&path, &mut values).unwrap();
+        assert_eq!(
+            values.get("HINDSIGHT_API_LLM_BASE_URL").map(String::as_str),
+            Some("https://provider.example/v1")
+        );
+        assert_eq!(
+            values.get("HINDSIGHT_API_LLM_MODEL").map(String::as_str),
+            Some("environment-model")
+        );
+        fs::remove_file(path).unwrap();
     }
 
     #[test]

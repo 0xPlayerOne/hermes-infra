@@ -19,24 +19,46 @@ Usage:
 
 Exit 0 = wrote/confirmed, 1 = bad args.
 """
+
 import os
 import sys
 from pathlib import Path
+
 
 # ---- detection ----------------------------------------------------------
 def detect(path: Path) -> dict:
     """Return detected stack signals."""
     sig = {
-        "ts": 0, "py": 0, "rust": 0, "cs": 0, "sol": 0,
-        "unity": False, "bun_lock": False, "npm_lock": False,
-        "uv": False, "cargo": False, "sol_tool": None,
+        "ts": 0,
+        "py": 0,
+        "rust": 0,
+        "cs": 0,
+        "sol": 0,
+        "unity": False,
+        "bun_lock": False,
+        "npm_lock": False,
+        "uv": False,
+        "cargo": False,
+        "sol_tool": None,
     }
     for root, dirs, files in os.walk(path):
         # skip noise
-        dirs[:] = [d for d in dirs if d not in (
-            "node_modules", ".git", "target", "__pycache__",
-            "dist", "build", ".next", "out", "Library",
-        )]
+        dirs[:] = [
+            d
+            for d in dirs
+            if d
+            not in (
+                "node_modules",
+                ".git",
+                "target",
+                "__pycache__",
+                "dist",
+                "build",
+                ".next",
+                "out",
+                "Library",
+            )
+        ]
         for f in files:
             p = f.lower()
             if p.endswith(".sol"):
@@ -49,14 +71,14 @@ def detect(path: Path) -> dict:
                 # check if under Unity Assets
                 if "Assets" in root.split(os.sep):
                     sig["unity"] = True
-            elif p == "pyproject.toml" or p == "requirements.txt":
+            elif p in {"pyproject.toml", "requirements.txt"}:
                 sig["py"] += 1
             elif p == "cargo.toml":
                 sig["rust"] += 1
                 sig["cargo"] = True
             elif p.endswith(".cs"):
                 sig["cs"] += 1
-            elif p == "bun.lockb" or p == "bun.lock":
+            elif p in {"bun.lockb", "bun.lock"}:
                 sig["bun_lock"] = True
             elif p == "package-lock.json":
                 sig["npm_lock"] = True
@@ -65,6 +87,7 @@ def detect(path: Path) -> dict:
             elif p.endswith(".csproj") or p.endswith(".unitypackage"):
                 sig["cs"] += 1
     return sig
+
 
 def primary_lang(sig: dict) -> str:
     if sig["rust"] > 0:
@@ -83,6 +106,7 @@ def primary_lang(sig: dict) -> str:
         return "unity-cs"
     return "unknown"
 
+
 # ---- AGENTS.md templates ------------------------------------------------
 def agents_md(lang: str, sig: dict, repo_name: str) -> str:
     header = f"""# AGENTS.md — {repo_name}
@@ -93,7 +117,9 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 """
     if lang == "solidity":
         tool = "Foundry (forge)" if sig["sol_tool"] == "foundry.toml" else "Hardhat"
-        return header + f"""## Stack
+        return (
+            header
+            + f"""## Stack
 - **Language:** Solidity (smart contracts)
 - **Toolchain:** {tool}
 - **Why:** Blockchain contracts. NOT a web app — do NOT treat package.json as a Bun web project.
@@ -108,8 +134,11 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 - Never mix this with the web TS monorepo toolchain.
 - Audit critical: `slither` or `forge inspect` before mainnet deploys.
 """
+        )
     if lang == "rust":
-        return header + """## Stack
+        return (
+            header
+            + """## Stack
 - **Language:** Rust
 - **Package manager:** cargo (rustup-managed, stable-aarch64-apple-darwin)
 - **Why:** Systems / CLI / perf-critical. This is the aspirational default for new tooling.
@@ -127,9 +156,16 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 - NO npm/cargo mix unless explicitly a wasm-bindgen project.
 - If a Python CLI could be Rust, prefer Rust. Leave `// TODO(rust-migration)` breadcrumbs otherwise.
 """
+        )
     if lang == "typescript":
-        pm = "bun" if (sig["bun_lock"] or not sig["npm_lock"]) else "bun (npm lock present — migrate to bun)"
-        return header + f"""## Stack
+        pm = (
+            "bun"
+            if (sig["bun_lock"] or not sig["npm_lock"])
+            else "bun (npm lock present — migrate to bun)"
+        )
+        return (
+            header
+            + f"""## Stack
 - **Language:** TypeScript (web: Next.js / React)
 - **Package manager:** {pm}
 - **Why:** Web stays TypeScript. Tooling for Rust+WASM web is not ready; do NOT rewrite web in Rust.
@@ -147,9 +183,12 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 - Husky + lint-staged active. Commits run hooks — don't bypass with --no-verify.
 - 5-verb repo standard: the repo exposes exactly 5 root scripts.
 """
+        )
     if lang == "python":
         pm = "uv" if sig["uv"] else "uv (NO pip — migrate lockfile to uv)"
-        return header + f"""## Stack
+        return (
+            header
+            + f"""## Stack
 - **Language:** Python 3.11+
 - **Package manager:** {pm}
 - **Why:** Glue, data, automation, ML. Mature for agentic flows.
@@ -166,8 +205,11 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 - If this is a CLI/tool that could be Rust, mark with `# TODO(rust-migration)`.
 - venvs live in `.venv`; never commit them.
 """
+        )
     if lang == "unity-cs":
-        return header + """## Stack
+        return (
+            header
+            + """## Stack
 - **Language:** C# (Unity)
 - **Package manager:** NuGet / Unity Package Manager
 - **Why:** Locked. Unity owns the runtime. No choice, no migration.
@@ -181,8 +223,11 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 - Do NOT run `bun install` at repo root expecting app behavior — those are Unity asset packages.
 - Never let an agent treat the Unity project as a Node monorepo.
 """
+        )
     if lang == "mixed-ts-py":
-        return header + """## Stack
+        return (
+            header
+            + """## Stack
 - **Mixed:** TypeScript (web) + Python (glue/automation)
 - **Package managers:** Bun (TS) + uv (Python) — NEVER mix pip into the TS side.
 
@@ -194,12 +239,17 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 - Keep the two stacks in separate top-level dirs (e.g. `web/` + `scripts/` or `py/`).
 - Agents MUST detect which subtree they're in before running commands.
 """
-    return header + """## Stack
+        )
+    return (
+        header
+        + """## Stack
 - **Unknown / unmapped.**
 
 ## Action Required
 Run `repo_standardize.py` after adding code, or manually declare the stack here.
 """
+    )
+
 
 # ---- main ---------------------------------------------------------------
 def main():
@@ -223,8 +273,10 @@ def main():
 
     print(f"== repo_standardize.py: {target}")
     print(f"   detected: {lang}")
-    print(f"   signals : ts={sig['ts']} py={sig['py']} rust={sig['rust']} cs={sig['cs']} sol={sig['sol']} "
-          f"unity={sig['unity']} bun={sig['bun_lock']} npm={sig['npm_lock']} uv={sig['uv']}")
+    print(
+        f"   signals : ts={sig['ts']} py={sig['py']} rust={sig['rust']} cs={sig['cs']} sol={sig['sol']} "
+        f"unity={sig['unity']} bun={sig['bun_lock']} npm={sig['npm_lock']} uv={sig['uv']}"
+    )
 
     if check_only:
         print("\n--- AGENTS.md (dry-run, not written) ---\n")
@@ -235,6 +287,7 @@ def main():
         return
     out.write_text(content)
     print(f"   WROTE: {out}")
+
 
 if __name__ == "__main__":
     main()

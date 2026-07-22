@@ -1,19 +1,35 @@
 #!/usr/bin/env python3
 """Daily intelligence briefing delivered by Hermes cron."""
-import os, subprocess, json, urllib.request, datetime, re
+
+import datetime
+import json
+import os
+import re
+import subprocess
+import urllib.request
 
 USER = os.environ.get("GITHUB_USER", "")
 REPOS = [repo for repo in os.environ.get("INTEL_REPOS", "").split(",") if repo]
 ARXIV_CATS = os.environ.get("ARXIV_CATEGORIES", "cat:cs.AI+OR+cat:cs.CL+OR+cat:cs.CR+OR+cat:cs.SE")
 
+
 def run(cmd, timeout=25):
     try:
-        return subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout).stdout.strip()
+        return subprocess.run(
+            cmd, shell=True, capture_output=True, text=True, timeout=timeout
+        ).stdout.strip()
     except Exception as e:
         return f"(err: {e})"
 
-def build_briefing(user=USER, repos=REPOS, arxiv_categories=ARXIV_CATS,
-                   runner=run, opener=urllib.request.urlopen, today=None):
+
+def build_briefing(
+    user=USER,
+    repos=REPOS,
+    arxiv_categories=ARXIV_CATS,
+    runner=run,
+    opener=urllib.request.urlopen,
+    today=None,
+):
     today = today or datetime.date.today()
     lines = [f"🔥 DAILY INTEL — {today.strftime('%B %d, %Y')}\n", "📦 GITHUB"]
     found = False
@@ -41,8 +57,10 @@ def build_briefing(user=USER, repos=REPOS, arxiv_categories=ARXIV_CATS,
     lines.append(f"  {reminders if reminders else '(gate closed — run: remindctl authorize)'}")
 
     lines.append("\n📚 ARXIV (fresh)")
-    url = ("http://export.arxiv.org/api/query?search_query="
-           f"{arxiv_categories}&sortBy=submittedDate&max_results=6&sortOrder=descending")
+    url = (
+        "http://export.arxiv.org/api/query?search_query="
+        f"{arxiv_categories}&sortBy=submittedDate&max_results=6&sortOrder=descending"
+    )
     try:
         raw = opener(url, timeout=15).read().decode()
         for title in re.findall(r"<title>(.*?)</title>", raw)[1:7]:

@@ -66,11 +66,11 @@ launchctl unload ~/Library/LaunchAgents/com.hermes.tei.plist
 TEI takes ~45 seconds to warm up Metal on first launch. Verify readiness:
 
 ```bash
-curl -s http://localhost:6999/health
+curl -s http://127.0.0.1:6999/health
 # Expected: "OK" or empty 200 response
 
 # Test embedding generation
-curl -s http://localhost:6999/v1/embeddings \
+curl -s http://127.0.0.1:6999/v1/embeddings \
   -H "Content-Type: application/json" \
   -d '{"input": "Hello world", "model": "Qwen/Qwen3-Embedding-0.6B"}'
 ```

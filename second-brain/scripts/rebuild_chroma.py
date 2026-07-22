@@ -7,9 +7,8 @@ import shutil
 from pathlib import Path
 
 import chromadb
-from chromadb.config import Settings
-
 import sync as source
+from chromadb.config import Settings
 
 
 def parse_frontmatter(text):
@@ -24,7 +23,7 @@ def parse_frontmatter(text):
 
 
 def chunks(text, size=1500, step=1200):
-    return [text[i:i + size] for i in range(0, len(text), step) if text[i:i + size].strip()]
+    return [text[i : i + size] for i in range(0, len(text), step) if text[i : i + size].strip()]
 
 
 def main():
@@ -39,7 +38,9 @@ def main():
     files = total = 0
 
     for root, _, names in os.walk(source.VAULT):
-        if any(part in {".git", ".obsidian", "hindsight", "memory-facts"} for part in Path(root).parts):
+        if any(
+            part in {".git", ".obsidian", "hindsight", "memory-facts"} for part in Path(root).parts
+        ):
             continue
         for name in sorted(names):
             if not name.endswith(".md"):
@@ -56,7 +57,7 @@ def main():
             ids, docs, vectors, metas = [], [], [], []
             title = metadata.get("title", path.stem)
             origin = metadata.get("source", str(path.parent.relative_to(source.VAULT)))
-            for index, (piece, vector) in enumerate(zip(pieces, embeddings)):
+            for index, (piece, vector) in enumerate(zip(pieces, embeddings, strict=False)):
                 if vector is None:
                     continue
                 ids.append(f"{origin}:{title}#{index}")

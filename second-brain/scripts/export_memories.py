@@ -11,7 +11,11 @@ Live markdown (MEMORY.md, USER.md, skills/) are SYMLINKED — not exported.
 Run: python export_memories.py
 Cron: wire to daily run after the code-indexer.
 """
-import os, json, datetime, glob
+
+import datetime
+import glob
+import json
+import os
 
 VAULT = os.path.expanduser(os.environ.get("SECOND_BRAIN_DIR", "~/second-brain"))
 WORK_SECTION = os.environ.get("WORK_SECTION", "Work")
@@ -46,9 +50,13 @@ def export_memory_facts():
             for i, e in enumerate(entries):
                 content = e.get("content") if isinstance(e, dict) else str(e)
                 target = e.get("target", "general") if isinstance(e, dict) else "general"
-                fn = os.path.join(MEM_FACTS_DIR, f"{os.path.basename(f).replace('.json','')}-{i}.md")
+                fn = os.path.join(
+                    MEM_FACTS_DIR, f"{os.path.basename(f).replace('.json', '')}-{i}.md"
+                )
                 with open(fn, "w", encoding="utf-8") as out:
-                    out.write(f"---\ntype: memory-fact\ntarget: {target}\nsource: hermes-memory-tool\ndate: {datetime.date.today()}\n---\n\n{content}\n")
+                    out.write(
+                        f"---\ntype: memory-fact\ntarget: {target}\nsource: hermes-memory-tool\ndate: {datetime.date.today()}\n---\n\n{content}\n"
+                    )
                 count += 1
     return count
 
@@ -58,6 +66,7 @@ def export_hindsight():
     os.makedirs(HINDSIGHT_DIR, exist_ok=True)
     try:
         import urllib.request
+
         req = urllib.request.Request("http://127.0.0.1:9177/memories?limit=200")
         with urllib.request.urlopen(req, timeout=10) as r:
             data = json.loads(r.read().decode())
@@ -70,7 +79,9 @@ def export_hindsight():
                 continue
             fn = os.path.join(HINDSIGHT_DIR, f"{oid}.md")
             with open(fn, "w", encoding="utf-8") as out:
-                out.write(f"---\ntype: hindsight-observation\nid: {oid}\ndate: {datetime.date.today()}\n---\n\n{text}\n")
+                out.write(
+                    f"---\ntype: hindsight-observation\nid: {oid}\ndate: {datetime.date.today()}\n---\n\n{text}\n"
+                )
             n += 1
         return n
     except Exception as e:
@@ -81,10 +92,12 @@ def export_hindsight():
 
 def write_dashboard(mf, hs):
     dash = os.path.join(VAULT, "DASHBOARD.md")
+
     # dynamic counts from the vault
     def cnt(sub):
         d = os.path.join(VAULT, sub)
         return len(glob.glob(os.path.join(d, "*.md"))) if os.path.isdir(d) else 0
+
     sources = [
         (f"{WORK_SECTION}/Calendar/", "Calendar — work"),
         (f"{PERSONAL_SECTION}/Calendar/", "Calendar — personal"),

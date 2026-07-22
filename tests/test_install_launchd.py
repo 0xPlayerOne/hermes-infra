@@ -7,13 +7,19 @@ def test_render_templates_and_active_paths(load_script, tmp_path, monkeypatch):
     module.TEMPLATE_DIR = module.ROOT / "launchd"
     module.TEMPLATE_DIR.mkdir(parents=True)
     template = module.TEMPLATE_DIR / "com.test.plist.example"
-    template.write_bytes(plistlib.dumps({
-        "Label": "com.test",
-        "ProgramArguments": ["/path/to/hermes-infra/target/release/hermes-infra"],
-        "WorkingDirectory": "/path/to/.hermes",
-    }))
-    values = {"HERMES_HOME": str(tmp_path / "hermes"),
-              "HERMES_LAUNCH_AGENTS_DIR": str(tmp_path / "agents")}
+    template.write_bytes(
+        plistlib.dumps(
+            {
+                "Label": "com.test",
+                "ProgramArguments": ["/path/to/hermes-infra/target/release/hermes-infra"],
+                "WorkingDirectory": "/path/to/.hermes",
+            }
+        )
+    )
+    values = {
+        "HERMES_HOME": str(tmp_path / "hermes"),
+        "HERMES_LAUNCH_AGENTS_DIR": str(tmp_path / "agents"),
+    }
     document = plistlib.loads(module.render(template, values))
     assert document["ProgramArguments"][0] == str(module.ROOT / "target/release/hermes-infra")
     assert document["WorkingDirectory"] == str(tmp_path / "hermes")
@@ -23,7 +29,7 @@ def test_render_templates_and_active_paths(load_script, tmp_path, monkeypatch):
 def test_load_env_and_check_missing_drift(load_script, tmp_path, monkeypatch, capsys):
     module = load_script("scripts/install_launchd.py")
     env = tmp_path / ".env"
-    env.write_text("# comment\nROOT=one\nQUOTED=\"two\"\n", encoding="utf-8")
+    env.write_text('# comment\nROOT=one\nQUOTED="two"\n', encoding="utf-8")
     values = module.load_env(env)
     assert values["ROOT"] == "one"
     assert values["QUOTED"] == "two"

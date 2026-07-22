@@ -10,6 +10,7 @@ those are already global — but declares the pin for reproducibility.
 Usage:
   mise_toml_gen.py <repo> [--write]   # print (or --write) the .mise.toml
 """
+
 import os
 import sys
 from pathlib import Path
@@ -19,11 +20,29 @@ NODE = "24.18.0"
 PY = "3.11.15"
 RUST = "1.97.1"
 
+
 def detect(r: Path) -> str:
     ts = py = sol = cs = rust = 0
     unity = False
     for root, dirs, files in os.walk(r):
-        dirs[:] = [d for d in dirs if d not in ("node_modules", ".git", "target", "__pycache__", "dist", "build", ".next", "out", "Library", "bin", "obj")]
+        dirs[:] = [
+            d
+            for d in dirs
+            if d
+            not in (
+                "node_modules",
+                ".git",
+                "target",
+                "__pycache__",
+                "dist",
+                "build",
+                ".next",
+                "out",
+                "Library",
+                "bin",
+                "obj",
+            )
+        ]
         for f in files:
             p = f.lower()
             if p.endswith(".sol"):
@@ -54,6 +73,7 @@ def detect(r: Path) -> str:
         return "unity-cs"
     return "unknown"
 
+
 def toml_for(stack: str) -> str:
     lines = ["[tools]", ""]
     if stack in ("typescript", "solidity", "mixed-ts-py"):
@@ -68,9 +88,10 @@ def toml_for(stack: str) -> str:
         lines.append("# no mise-managed tools for this stack (Unity/dotnet/C# use globals)")
     lines.append("")
     lines.append("[settings]")
-    lines.append('experimental = true')
+    lines.append("experimental = true")
     lines.append("")
     return "\n".join(lines)
+
 
 def main():
     args = sys.argv[1:]
@@ -95,6 +116,7 @@ def main():
     else:
         print(f"# {repo.name} -> {stack}")
         print(content)
+
 
 if __name__ == "__main__":
     main()

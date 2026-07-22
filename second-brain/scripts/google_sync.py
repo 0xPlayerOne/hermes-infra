@@ -9,13 +9,27 @@ Syncs (via Google REST API + curl, avoiding httplib2 TLS stalls):
 
 Auth: OAuth tokens in ~/.hermes/google-tokens/{account}.json (refreshed on expiry).
 """
-import os, json, base64, datetime, subprocess, glob, re, sys, time
+
+import datetime
+import json
+import os
+import re
+import subprocess
+import time
+from datetime import UTC
 from pathlib import Path
-from urllib.parse import quote as urlquote, urlencode
+from urllib.parse import quote as urlquote
+from urllib.parse import urlencode
+
+import chromadb
+from chromadb.config import Settings
 
 HERMES = Path(os.path.expanduser(os.environ.get("HERMES_HOME", "~/.hermes")))
-CREDS_FILE = HERMES / "google-oauth.keys.json" if os.path.exists(HERMES / "google-oauth.keys.json") \
+CREDS_FILE = (
+    HERMES / "google-oauth.keys.json"
+    if os.path.exists(HERMES / "google-oauth.keys.json")
     else HERMES / "gcp-oauth.keys.json"
+)
 TOKEN_DIR = HERMES / "google-tokens"
 VAULT_ROOT = Path(os.path.expanduser(os.environ.get("SECOND_BRAIN_DIR", "~/second-brain")))
 WORK_SECTION = os.environ.get("WORK_SECTION", "Work")
@@ -63,14 +77,19 @@ ACCOUNTS = list(dict.fromkeys([WORK_ACCOUNT, PERSONAL_ACCOUNT, SPECIAL_ACCOUNT])
 # ============================================================================
 # Canonical routing. Keywords are configured in the local environment.
 # ============================================================================
-WORK_KEYS = [item.strip() for item in os.environ.get(
-    "WORK_ROUTE_KEYWORDS", "work,business").split(",") if item.strip()]
-SPECIAL_KEYS = [item.strip() for item in os.environ.get(
-    "SPECIAL_ROUTE_KEYWORDS", "special").split(",") if item.strip()]
+WORK_KEYS = [
+    item.strip()
+    for item in os.environ.get("WORK_ROUTE_KEYWORDS", "work,business").split(",")
+    if item.strip()
+]
+SPECIAL_KEYS = [
+    item.strip()
+    for item in os.environ.get("SPECIAL_ROUTE_KEYWORDS", "special").split(",")
+    if item.strip()
+]
 
-import re as _re
-_WORK_RE = _re.compile("|".join(map(_re.escape, WORK_KEYS)), _re.I)
-_SPECIAL_RE = _re.compile("|".join(map(_re.escape, SPECIAL_KEYS)), _re.I)
+_WORK_RE = re.compile("|".join(map(re.escape, WORK_KEYS)), re.I)
+_SPECIAL_RE = re.compile("|".join(map(re.escape, SPECIAL_KEYS)), re.I)
 
 
 def is_special(name):
@@ -90,10 +109,6 @@ def route_text(name, text=""):
     return "personal"
 
 
-import chromadb
-from chromadb.config import Settings
-
-
 def log(m):
     print(f"[google] {m}", flush=True)
 
@@ -101,12 +116,16 @@ def log(m):
 class _NullCollection:
     """No-op chroma stand-in when the index is corrupt/unavailable.
     Vault files are still written; vector indexing is skipped."""
+
     def upsert(self, *a, **k):
         pass
+
     def delete(self, *a, **k):
         pass
+
     def count(self):
         return 0
+
     def get(self, *a, **k):
         return {}
 
@@ -114,8 +133,8 @@ class _NullCollection:
 def get_col():
     try:
         c = chromadb.PersistentClient(
-            path=str(CHROMA_DIR),
-            settings=Settings(anonymized_telemetry=False, allow_reset=True))
+            path=str(CHROMA_DIR), settings=Settings(anonymized_telemetry=False, allow_reset=True)
+        )
         return c.get_or_create_collection(name="second_brain")
     except Exception:
         return _NullCollection()
@@ -124,11 +143,14 @@ def get_col():
 def embed(texts):
     """Best-effort embeddings through the same TEI service as the indexer."""
     import urllib.request
+
     try:
         url = os.environ.get("TEI_EMBED_URL", "http://127.0.0.1:6999/v1/embeddings")
         req = urllib.request.Request(
-            url, data=json.dumps({"model": EMBED_MODEL, "input": texts}).encode(),
-            headers={"Content-Type": "application/json"})
+            url,
+            data=json.dumps({"model": EMBED_MODEL, "input": texts}).encode(),
+            headers={"Content-Type": "application/json"},
+        )
         with urllib.request.urlopen(req, timeout=60) as response:
             data = json.load(response)
         return [item["embedding"] for item in data.get("data", [])]
@@ -170,8 +192,7 @@ def load_creds(account):
 
 def save_creds(account, creds):
     TOKEN_DIR.mkdir(parents=True, exist_ok=True)
-    (TOKEN_DIR / f"{account}.json").write_text(
-        json.dumps(creds, indent=2), encoding="utf-8")
+    (TOKEN_DIR / f"{account}.json").write_text(json.dumps(creds, indent=2), encoding="utf-8")
 
 
 def refresh_token(account, creds):
@@ -180,31 +201,45 @@ def refresh_token(account, creds):
     cid = creds.get("client_id") or creds.get("installed", {}).get("client_id")
     csec = creds.get("client_secret") or creds.get("installed", {}).get("client_secret")
     rt = creds.get("refresh_token")
-    if not (cid and csec and rt):
+    if not (cid and csec and rt) and CREDS_FILE.exists():
         # fall back to keys file
-        if CREDS_FILE.exists():
-            ks = json.loads(CREDS_FILE.read_text())
-            cid = cid or ks.get("client_id") or ks.get("installed", {}).get("client_id")
-            csec = csec or ks.get("client_secret") or ks.get("installed", {}).get("client_secret")
+        ks = json.loads(CREDS_FILE.read_text())
+        cid = cid or ks.get("client_id") or ks.get("installed", {}).get("client_id")
+        csec = csec or ks.get("client_secret") or ks.get("installed", {}).get("client_secret")
     if not (cid and csec and rt):
         return creds
     data = {
-        "client_id": cid, "client_secret": csec, "refresh_token": rt,
+        "client_id": cid,
+        "client_secret": csec,
+        "refresh_token": rt,
         "grant_type": "refresh_token",
     }
     try:
         res = subprocess.run(
-            ["curl", "-s", "-m", "30", "-X", "POST",
-             "https://oauth2.googleapis.com/token",
-             "-H", "Content-Type: application/x-www-form-urlencoded",
-              "--data", urlencode(data)],
-            capture_output=True, text=True, timeout=40)
+            [
+                "curl",
+                "-s",
+                "-m",
+                "30",
+                "-X",
+                "POST",
+                "https://oauth2.googleapis.com/token",
+                "-H",
+                "Content-Type: application/x-www-form-urlencoded",
+                "--data",
+                urlencode(data),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=40,
+        )
         tok = json.loads(res.stdout)
         if "access_token" in tok:
             creds["token"] = tok["access_token"]
             if "expires_in" in tok:
-                creds["expiry"] = (datetime.datetime.utcnow() +
-                                   datetime.timedelta(seconds=int(tok["expires_in"]))).isoformat()
+                creds["expiry"] = (
+                    datetime.datetime.utcnow() + datetime.timedelta(seconds=int(tok["expires_in"]))
+                ).isoformat()
             save_creds(account, creds)
             log(f"  {account}: token refreshed")
     except Exception as e:
@@ -221,7 +256,7 @@ def get_creds(account):
     if exp:
         try:
             exp_dt = datetime.datetime.fromisoformat(exp.replace("Z", "+00:00"))
-            now = datetime.datetime.now(datetime.timezone.utc)
+            now = datetime.datetime.now(UTC)
             if exp_dt.tzinfo is None:
                 now = now.replace(tzinfo=None)
             if exp_dt < now:
@@ -250,24 +285,24 @@ def store(col, account, title, body, gdoc_id, source="google-drive", vault_dir=N
                 return  # already up-to-date today
         except Exception:
             pass
-    fmatter = (f"---\nsource: {source}\naccount: {account}\ngdoc_id: {gdoc_id}\n"
-               f"date: {today}\n")
+    fmatter = f"---\nsource: {source}\naccount: {account}\ngdoc_id: {gdoc_id}\ndate: {today}\n"
     if folder:
         fmatter += f"folder: {folder}\n"
     fmatter += f"---\n\n{body}\n"
     path.write_text(fmatter)
     # embed
-    chunks = [body[i:i + 1500] for i in range(0, len(body), 1200)]
+    chunks = [body[i : i + 1500] for i in range(0, len(body), 1200)]
     chunks = [c for c in chunks if c.strip()]
     if not chunks:
         return
     embs = embed(chunks)
     ids, docs, metas, good_embs = [], [], [], []
-    for i, (ch, e) in enumerate(zip(chunks, embs)):
+    for i, (ch, e) in enumerate(zip(chunks, embs, strict=False)):
         if e is None:
             continue
         ids.append(f"{source}:{account}:{gdoc_id}#{i}")
-        docs.append(ch); good_embs.append(e)
+        docs.append(ch)
+        good_embs.append(e)
         metas.append({"source": source, "account": account, "title": title, "chunk": i})
     if ids:
         try:
@@ -302,10 +337,13 @@ def sync_calendar(account, vault_dir=None, source="google-calendar"):
         return
     col = get_col()
     try:
-        from datetime import datetime, timezone
-        time_min = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        url = ("https://www.googleapis.com/calendar/v3/calendars/primary/events"
-               f"?maxResults=50&singleEvents=true&orderBy=startTime&timeMin={time_min}")
+        from datetime import datetime
+
+        time_min = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        url = (
+            "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+            f"?maxResults=50&singleEvents=true&orderBy=startTime&timeMin={time_min}"
+        )
         data = gapi_get(url, creds, account, "cal")
         for ev in (data or {}).get("items", []):
             title = ev.get("summary", "untitled")
@@ -332,7 +370,10 @@ def sync_gmail(account, vault_dir=None, source="google-gmail"):
         msgs = gapi_get(
             "https://gmail.googleapis.com/gmail/v1/users/me/messages?"
             "maxResults=30&q=newer_than%3A30d",
-            creds, account, f"{account}/gmail-list")
+            creds,
+            account,
+            f"{account}/gmail-list",
+        )
         mids = (msgs or {}).get("messages", [])
         n = 0
         for m in mids:
@@ -340,15 +381,28 @@ def sync_gmail(account, vault_dir=None, source="google-gmail"):
                 msg = gapi_get(
                     f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{m['id']}"
                     "?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date",
-                    creds, account, f"mail {m['id']}")
+                    creds,
+                    account,
+                    f"mail {m['id']}",
+                )
                 if not msg:
                     continue
                 headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
                 snippet = (msg.get("snippet") or "").strip()
-                text = (f"From: {headers.get('From','?')}\n"
-                        f"Subject: {headers.get('Subject','?')}\n"
-                        f"Date: {headers.get('Date','?')}\n\n{snippet[:500]}")
-                store(col, account, f"mail-{m['id']}", text, m["id"], source=source, vault_dir=vault_dir)
+                text = (
+                    f"From: {headers.get('From', '?')}\n"
+                    f"Subject: {headers.get('Subject', '?')}\n"
+                    f"Date: {headers.get('Date', '?')}\n\n{snippet[:500]}"
+                )
+                store(
+                    col,
+                    account,
+                    f"mail-{m['id']}",
+                    text,
+                    m["id"],
+                    source=source,
+                    vault_dir=vault_dir,
+                )
                 n += 1
             except Exception:
                 continue
@@ -361,8 +415,18 @@ def is_meeting_doc(name):
     """Heuristic: Drive docs that are meeting/call transcripts get routed to
     the meetings folder instead of a generic Drive destination."""
     n = (name or "").lower()
-    keys = ["meet", "transcript", "notes by gemini", "meeting", "company sync",
-            "call", "1:1", "standup", "sync -", " sync "]
+    keys = [
+        "meet",
+        "transcript",
+        "notes by gemini",
+        "meeting",
+        "company sync",
+        "call",
+        "1:1",
+        "standup",
+        "sync -",
+        " sync ",
+    ]
     return any(k in n for k in keys)
 
 
@@ -374,12 +438,17 @@ def _drive_list(creds, account, parent=None, drive_id=None):
     page = None
     base = "https://www.googleapis.com/drive/v3/files"
     while True:
-        url = (f"{base}?q={urlquote(q)}"
-               f"&pageSize=100&fields=files(id,name,mimeType,parents)"
-               + (f"&pageToken={page}" if page else "")
-               + (f"&corpora=drive&includeItemsFromAllDrives=true"
-                  f"&supportsAllDrives=true&driveId={urlquote(drive_id)}"
-                  if drive_id else ""))
+        url = (
+            f"{base}?q={urlquote(q)}"
+            f"&pageSize=100&fields=files(id,name,mimeType,parents)"
+            + (f"&pageToken={page}" if page else "")
+            + (
+                f"&corpora=drive&includeItemsFromAllDrives=true"
+                f"&supportsAllDrives=true&driveId={urlquote(drive_id)}"
+                if drive_id
+                else ""
+            )
+        )
         data = gapi_get(url, creds, account, f"{account}/drive-list")
         if not data:
             break
@@ -401,13 +470,19 @@ def _drive_fetch_file(creds, account, col, fid, name, mt, vdir, folder=None):
     try:
         raw = gapi_get(
             f"https://www.googleapis.com/drive/v3/files/{fid}?alt=media",
-            creds, account, f"dl {name}", raw=True)
+            creds,
+            account,
+            f"dl {name}",
+            raw=True,
+        )
         if not raw:
             return
         text = ""
         if mt == "application/pdf":
             import io
+
             import pdfplumber
+
             try:
                 with pdfplumber.open(io.BytesIO(raw)) as pdf:
                     text = "\n".join((p.extract_text() or "") for p in pdf.pages)
@@ -422,8 +497,16 @@ def _drive_fetch_file(creds, account, col, fid, name, mt, vdir, folder=None):
                 text = ""
         if not text.strip():
             text = f"[Drive file: {name} ({mt}) — no extractable text]"
-        store(col, account, name, text[:8000], fid,
-              source="google-drive-file", vault_dir=vdir, folder=folder)
+        store(
+            col,
+            account,
+            name,
+            text[:8000],
+            fid,
+            source="google-drive-file",
+            vault_dir=vdir,
+            folder=folder,
+        )
     except Exception as e:
         log(f"  drive-file {name}: skip {type(e).__name__}: {str(e)[:40]}")
 
@@ -433,15 +516,17 @@ def _fetch_sheet(creds, account, col, fid, name, vdir, folder):
     try:
         data = gapi_get(
             f"https://sheets.googleapis.com/v4/spreadsheets/{fid}/values/A1:Z100",
-            creds, account, f"sheet {name}")
+            creds,
+            account,
+            f"sheet {name}",
+        )
         rows = (data or {}).get("values", [])
         if not rows:
             return
         tsv = "\n".join("\t".join(str(c) for c in r) for r in rows[:100])
         if len(tsv) > 50000:
             tsv = tsv[:50000]
-        store(col, account, name, tsv, fid,
-              source="google-sheets", vault_dir=vdir, folder=folder)
+        store(col, account, name, tsv, fid, source="google-sheets", vault_dir=vdir, folder=folder)
     except Exception as e:
         log(f"  sheet {name}: skip {type(e).__name__}: {str(e)[:40]}")
 
@@ -518,23 +603,39 @@ def _drive_walk(creds, account, col, parent, path_parts, base_dir, drive_source,
             if _folder_all_images(creds, account, fid, drive_id=drive_id):
                 log(f"  skip image-only folder: {name}")
                 continue
-            _drive_walk(creds, account, col, fid, path_parts + [name],
-                        folder_root, drive_source, drive_id=drive_id)
+            _drive_walk(
+                creds,
+                account,
+                col,
+                fid,
+                path_parts + [name],
+                folder_root,
+                drive_source,
+                drive_id=drive_id,
+            )
             continue
         # Use folder-driven root by default; preserve full Drive path under it.
         vdir = _drive_target_dir(folder_root, path_parts, name)
         if mt == "application/vnd.google-apps.document":
             try:
                 doc = gapi_get(
-                    f"https://docs.googleapis.com/v1/documents/{fid}",
-                    creds, account, f"doc {name}")
+                    f"https://docs.googleapis.com/v1/documents/{fid}", creds, account, f"doc {name}"
+                )
                 text = extract_doc_text(doc) if doc else ""
                 if not text.strip():
                     continue
                 # Re-check category with document text; path stays intact.
                 vdir = _drive_target_dir(folder_root, path_parts, name, text)
-                store(col, account, name, text, fid,
-                      source=drive_source, vault_dir=vdir, folder=folder_path)
+                store(
+                    col,
+                    account,
+                    name,
+                    text,
+                    fid,
+                    source=drive_source,
+                    vault_dir=vdir,
+                    folder=folder_path,
+                )
             except Exception as e:
                 log(f"  doc {name}: skip {type(e).__name__}: {str(e)[:40]}")
         elif mt == "application/vnd.google-apps.spreadsheet":
@@ -553,14 +654,20 @@ def sync(account, drive_vault_dir=None, drive_source="google-drive", drive_id=No
     if not creds:
         return
     col = get_col()
-    base_dir = (Path(drive_vault_dir) if drive_vault_dir
-                else VAULT_SPECIAL_DRIVE if account == SPECIAL_ACCOUNT
-                else VAULT_WORK_DRIVE if account == WORK_ACCOUNT
-                else VAULT_PERS_DRIVE)
+    base_dir = (
+        Path(drive_vault_dir)
+        if drive_vault_dir
+        else VAULT_SPECIAL_DRIVE
+        if account == SPECIAL_ACCOUNT
+        else VAULT_WORK_DRIVE
+        if account == WORK_ACCOUNT
+        else VAULT_PERS_DRIVE
+    )
     try:
         start_parent = drive_id if drive_id else "root"
-        _drive_walk(creds, account, col, start_parent, [], base_dir,
-                    drive_source, drive_id=drive_id)
+        _drive_walk(
+            creds, account, col, start_parent, [], base_dir, drive_source, drive_id=drive_id
+        )
         log(f"  {account}: drive synced")
     except Exception as e:
         log(f"  {account}: drive skip: {type(e).__name__}: {str(e)[:60]}")
@@ -578,14 +685,18 @@ def oauth_auth(account):
     if not (cid and csec):
         log(f"  No client_id/secret in {CREDS_FILE.name}.")
         return
-    scope = "https://www.googleapis.com/auth/drive.readonly " \
-            "https://www.googleapis.com/auth/calendar.readonly " \
-            "https://www.googleapis.com/auth/gmail.readonly " \
-            "https://www.googleapis.com/auth/spreadsheets.readonly"
+    scope = (
+        "https://www.googleapis.com/auth/drive.readonly "
+        "https://www.googleapis.com/auth/calendar.readonly "
+        "https://www.googleapis.com/auth/gmail.readonly "
+        "https://www.googleapis.com/auth/spreadsheets.readonly"
+    )
     redirect = "urn:ietf:wg:oauth:2.0:oob"
-    auth_url = ("https://accounts.google.com/o/oauth2/v2/auth?"
-                 f"client_id={urlquote(cid)}&redirect_uri={urlquote(redirect)}"
-                 f"&response_type=code&scope={urlquote(scope)}&access_type=offline&prompt=consent")
+    auth_url = (
+        "https://accounts.google.com/o/oauth2/v2/auth?"
+        f"client_id={urlquote(cid)}&redirect_uri={urlquote(redirect)}"
+        f"&response_type=code&scope={urlquote(scope)}&access_type=offline&prompt=consent"
+    )
     print(f"\nOpen this URL in your browser and authorize {account}:")
     print(auth_url)
     code = input("Paste the authorization code here: ").strip()
@@ -594,14 +705,25 @@ def oauth_auth(account):
         return
     try:
         res = subprocess.run(
-            ["curl", "-s", "-m", "40", "-X", "POST",
-             "https://oauth2.googleapis.com/token",
-             "-H", "Content-Type: application/x-www-form-urlencoded",
-             "--data",
-             f"code={urlquote(code)}&client_id={urlquote(cid)}"
-             f"&client_secret={urlquote(csec)}&redirect_uri={urlquote(redirect)}"
-             f"&grant_type=authorization_code"],
-            capture_output=True, text=True, timeout=50)
+            [
+                "curl",
+                "-s",
+                "-m",
+                "40",
+                "-X",
+                "POST",
+                "https://oauth2.googleapis.com/token",
+                "-H",
+                "Content-Type: application/x-www-form-urlencoded",
+                "--data",
+                f"code={urlquote(code)}&client_id={urlquote(cid)}"
+                f"&client_secret={urlquote(csec)}&redirect_uri={urlquote(redirect)}"
+                f"&grant_type=authorization_code",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=50,
+        )
         tok = json.loads(res.stdout)
         if "access_token" not in tok:
             log(f"  Auth failed: {res.stdout[:120]}")
@@ -609,9 +731,12 @@ def oauth_auth(account):
         creds = {
             "token": tok.get("access_token"),
             "refresh_token": tok.get("refresh_token"),
-            "client_id": cid, "client_secret": csec,
-            "expiry": (datetime.datetime.utcnow() +
-                       datetime.timedelta(seconds=int(tok.get("expires_in", 3600)))).isoformat(),
+            "client_id": cid,
+            "client_secret": csec,
+            "expiry": (
+                datetime.datetime.utcnow()
+                + datetime.timedelta(seconds=int(tok.get("expires_in", 3600)))
+            ).isoformat(),
         }
         save_creds(account, creds)
         log(f"  {account}: OAuth complete, token saved.")
@@ -621,6 +746,7 @@ def oauth_auth(account):
 
 def main():
     import argparse
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--auth", help="run interactive OAuth for a configured account")
     ap.add_argument("--account", help="sync a specific account (default: all configured)")
@@ -645,9 +771,17 @@ def main():
             try:
                 dlist = gapi_get(
                     "https://www.googleapis.com/drive/v3/drives?pageSize=10",
-                    get_creds(acc), acc, f"{acc}/drives")
+                    get_creds(acc),
+                    acc,
+                    f"{acc}/drives",
+                )
                 for d in (dlist or {}).get("drives", []):
-                    sync(acc, drive_vault_dir=VAULT_WORK_DRIVE, drive_source="work-drive", drive_id=d["id"])
+                    sync(
+                        acc,
+                        drive_vault_dir=VAULT_WORK_DRIVE,
+                        drive_source="work-drive",
+                        drive_id=d["id"],
+                    )
             except Exception as e:
                 log(f"  {acc}: shared drives skip: {e}")
         elif acc == SPECIAL_ACCOUNT:

@@ -2,7 +2,6 @@ import datetime
 import io
 import json
 import subprocess
-from pathlib import Path
 from types import SimpleNamespace
 
 
@@ -52,7 +51,9 @@ def test_get_col_success_and_failure(load_script, monkeypatch):
     client = SimpleNamespace(get_or_create_collection=lambda name: collection)
     monkeypatch.setattr(gs.chromadb, "PersistentClient", lambda **kwargs: client)
     assert gs.get_col() is collection
-    monkeypatch.setattr(gs.chromadb, "PersistentClient", lambda **kwargs: (_ for _ in ()).throw(RuntimeError()))
+    monkeypatch.setattr(
+        gs.chromadb, "PersistentClient", lambda **kwargs: (_ for _ in ()).throw(RuntimeError())
+    )
     assert isinstance(gs.get_col(), gs._NullCollection)
 
 
@@ -98,7 +99,12 @@ def test_credentials_round_trip_and_refresh(load_script, tmp_path, monkeypatch):
     assert gs.load_creds("missing") is None
     gs.save_creds("work", {"token": "old"})
     assert gs.load_creds("work") == {"token": "old"}
-    creds = {"token": "old", "refresh_token": "refresh", "client_id": "id", "client_secret": "secret"}
+    creds = {
+        "token": "old",
+        "refresh_token": "refresh",
+        "client_id": "id",
+        "client_secret": "secret",
+    }
     response = SimpleNamespace(stdout=json.dumps({"access_token": "new", "expires_in": 60}))
     monkeypatch.setattr(gs.subprocess, "run", lambda *a, **k: response)
     assert gs.refresh_token("work", creds)["token"] == "new"
@@ -107,11 +113,13 @@ def test_credentials_round_trip_and_refresh(load_script, tmp_path, monkeypatch):
 
 def test_get_creds_refreshes_aware_and_naive_expiry(load_script, monkeypatch):
     gs = module(load_script)
-    expired = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=1)
+    expired = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=1)
     monkeypatch.setattr(gs, "load_creds", lambda account: {"expiry": expired.isoformat()})
     monkeypatch.setattr(gs, "refresh_token", lambda account, creds: {"refreshed": True})
     assert gs.get_creds("work") == {"refreshed": True}
-    monkeypatch.setattr(gs, "load_creds", lambda account: {"expiry": expired.replace(tzinfo=None).isoformat()})
+    monkeypatch.setattr(
+        gs, "load_creds", lambda account: {"expiry": expired.replace(tzinfo=None).isoformat()}
+    )
     assert gs.get_creds("work") == {"refreshed": True}
 
 
@@ -132,12 +140,32 @@ def test_store_writes_chunks_skips_and_survives_chroma_failure(load_script, tmp_
 
 def test_extract_doc_text(load_script):
     gs = module(load_script)
-    doc = {"body": {"content": [
-        {"paragraph": {"elements": [{"textRun": {"content": "hello "}}]}},
-        {"table": {"tableRows": [{"tableCells": [{"content": [
-            {"paragraph": {"elements": [{"textRun": {"content": "table"}}]}}
-        ]}]}]}},
-    ]}}
+    doc = {
+        "body": {
+            "content": [
+                {"paragraph": {"elements": [{"textRun": {"content": "hello "}}]}},
+                {
+                    "table": {
+                        "tableRows": [
+                            {
+                                "tableCells": [
+                                    {
+                                        "content": [
+                                            {
+                                                "paragraph": {
+                                                    "elements": [{"textRun": {"content": "table"}}]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                },
+            ]
+        }
+    }
     assert gs.extract_doc_text(doc) == "hello table"
     assert gs.extract_doc_text({}) == ""
 
@@ -178,9 +206,9 @@ def test_drive_list_paginates(load_script, monkeypatch):
 
 def test_folder_all_images(load_script, monkeypatch):
     gs = module(load_script)
-    monkeypatch.setattr(gs, "_drive_list", lambda *a, **k: [
-        {"mimeType": "image/png"}, {"mimeType": "image/jpeg"}
-    ])
+    monkeypatch.setattr(
+        gs, "_drive_list", lambda *a, **k: [{"mimeType": "image/png"}, {"mimeType": "image/jpeg"}]
+    )
     assert gs._folder_all_images({}, "work", "root")
     monkeypatch.setattr(gs, "_drive_list", lambda *a, **k: [{"mimeType": "text/plain"}])
     assert not gs._folder_all_images({}, "work", "root")
@@ -195,13 +223,27 @@ def test_sync_calendar_and_gmail(load_script, monkeypatch):
 
     def api(url, *args, **kwargs):
         if "calendar" in url:
-            return {"items": [{"id": "event", "summary": "Standup",
-                                "start": {"dateTime": "today"}, "description": "desc"}]}
+            return {
+                "items": [
+                    {
+                        "id": "event",
+                        "summary": "Standup",
+                        "start": {"dateTime": "today"},
+                        "description": "desc",
+                    }
+                ]
+            }
         if "messages?" in url:
             return {"messages": [{"id": "mail"}]}
-        return {"snippet": "hello", "payload": {"headers": [
-            {"name": "From", "value": "sender"}, {"name": "Subject", "value": "subject"}
-        ]}}
+        return {
+            "snippet": "hello",
+            "payload": {
+                "headers": [
+                    {"name": "From", "value": "sender"},
+                    {"name": "Subject", "value": "subject"},
+                ]
+            },
+        }
 
     monkeypatch.setattr(gs, "gapi_get", api)
     gs.sync_calendar("work")
@@ -217,7 +259,11 @@ def test_drive_file_and_sheet_fetch(load_script, monkeypatch, tmp_path):
     gs = module(load_script)
     stored = []
     monkeypatch.setattr(gs, "store", lambda *args, **kwargs: stored.append((args, kwargs)))
-    monkeypatch.setattr(gs, "gapi_get", lambda *a, **k: b"plain text" if k.get("raw") else {"values": [["a", "b"], [1, 2]]})
+    monkeypatch.setattr(
+        gs,
+        "gapi_get",
+        lambda *a, **k: b"plain text" if k.get("raw") else {"values": [["a", "b"], [1, 2]]},
+    )
     gs._drive_fetch_file({}, "work", object(), "id", "image", "image/png", tmp_path)
     assert not stored
     gs._drive_fetch_file({}, "work", object(), "id", "text", "text/plain", tmp_path)
@@ -246,10 +292,15 @@ def test_drive_walk_dispatches_all_file_types(load_script, monkeypatch, tmp_path
     lists = iter([files, []])
     monkeypatch.setattr(gs, "_drive_list", lambda *a, **k: next(lists))
     monkeypatch.setattr(gs, "_folder_all_images", lambda *a, **k: False)
-    monkeypatch.setattr(gs, "gapi_get", lambda *a, **k: {
-        "body": {"content": [{"paragraph": {"elements": [
-            {"textRun": {"content": "doc text"}}
-        ]}}]}})
+    monkeypatch.setattr(
+        gs,
+        "gapi_get",
+        lambda *a, **k: {
+            "body": {
+                "content": [{"paragraph": {"elements": [{"textRun": {"content": "doc text"}}]}}]
+            }
+        },
+    )
     calls = []
     monkeypatch.setattr(gs, "store", lambda *a, **k: calls.append("doc"))
     monkeypatch.setattr(gs, "_fetch_sheet", lambda *a, **k: calls.append("sheet"))
@@ -278,13 +329,15 @@ def test_oauth_auth_paths(load_script, tmp_path, monkeypatch):
     gs.CREDS_FILE = tmp_path / "keys.json"
     gs.TOKEN_DIR = tmp_path / "tokens"
     gs.oauth_auth("work")
-    gs.CREDS_FILE.write_text(json.dumps({"installed": {
-        "client_id": "id", "client_secret": "secret"}}), encoding="utf-8")
+    gs.CREDS_FILE.write_text(
+        json.dumps({"installed": {"client_id": "id", "client_secret": "secret"}}), encoding="utf-8"
+    )
     monkeypatch.setattr("builtins.input", lambda prompt: "")
     gs.oauth_auth("work")
     monkeypatch.setattr("builtins.input", lambda prompt: "code")
-    response = SimpleNamespace(stdout=json.dumps({
-        "access_token": "token", "refresh_token": "refresh", "expires_in": 60}))
+    response = SimpleNamespace(
+        stdout=json.dumps({"access_token": "token", "refresh_token": "refresh", "expires_in": 60})
+    )
     monkeypatch.setattr(gs.subprocess, "run", lambda *a, **k: response)
     gs.oauth_auth("work")
     assert gs.load_creds("work")["token"] == "token"
@@ -295,9 +348,15 @@ def test_main_auth_and_all_accounts(load_script, monkeypatch):
     calls = []
     monkeypatch.setattr(gs, "oauth_auth", lambda account: calls.append(("auth", account)))
     monkeypatch.setattr(gs, "get_creds", lambda account: {"token": "token"})
-    monkeypatch.setattr(gs, "sync", lambda account, **kwargs: calls.append(("sync", account, kwargs)))
-    monkeypatch.setattr(gs, "sync_calendar", lambda account, **kwargs: calls.append(("calendar", account)))
-    monkeypatch.setattr(gs, "sync_gmail", lambda account, **kwargs: calls.append(("gmail", account)))
+    monkeypatch.setattr(
+        gs, "sync", lambda account, **kwargs: calls.append(("sync", account, kwargs))
+    )
+    monkeypatch.setattr(
+        gs, "sync_calendar", lambda account, **kwargs: calls.append(("calendar", account))
+    )
+    monkeypatch.setattr(
+        gs, "sync_gmail", lambda account, **kwargs: calls.append(("gmail", account))
+    )
     monkeypatch.setattr(gs, "gapi_get", lambda *a, **k: {"drives": [{"id": "shared"}]})
     monkeypatch.setattr(__import__("sys"), "argv", ["google", "--auth", gs.WORK_ACCOUNT])
     gs.main()

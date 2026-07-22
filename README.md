@@ -32,7 +32,7 @@ Local-first AI infrastructure: embeddings, semantic indexing, second-brain sync,
 | **TEI Embeddings** | Local text embeddings (Qwen3-0.6B, 1024-dim) | Free |
 | **Code Indexer** | Semantic search over `$DEV_ROOT` repos | Free |
 | **Second-Brain Sync** | GitHub, Apple Notes, Drive → Chroma | Free |
-| **Hindsight** | Long-term memory recall | OpenRouter Free |
+| **Hindsight** | Long-term memory recall | Local daemon + configured OpenAI-compatible LLM |
 | **Guardian** | Command gatekeeper (blocks destructive ops) | N/A |
 | **AGENTS.md Watchdog** | Ensures fleet-wide agent coverage | Free |
 
@@ -60,12 +60,36 @@ cargo build --release
 ./scripts/setup-python.sh
 source .venv/bin/activate
 
+# Install the repository-local pre-commit hook
+git config core.hooksPath .githooks
+
 # 6. Run the indexer
 python code-index/indexer.py --index
 
 # 7. Run the second-brain sync
 python second-brain/scripts/sync.py
 ```
+
+## Hindsight LLM provider
+
+Hindsight uses the local Rust supervisor and TEI for embeddings, but its chat and fact-extraction
+LLM is a separately configured OpenAI-compatible endpoint. It does **not** automatically inherit
+Hermes `model.default` or `fallback_providers`; Hindsight accepts one LLM endpoint at a time.
+
+Configure these values in `$HERMES_HOME/hindsight/config.json` or the environment loaded by the
+Hindsight launch agent:
+
+```text
+HINDSIGHT_API_LLM_PROVIDER=openai
+HINDSIGHT_API_LLM_BASE_URL=https://provider.example/v1
+HINDSIGHT_API_LLM_MODEL=<structured-output-capable-chat-model>
+HINDSIGHT_LLM_API_KEY=<provider-key>
+```
+
+The old `openrouter/free` default is not a reliability guarantee and is no longer supplied by the
+repository launcher. The configured model must support Hindsight's JSON structured-output request;
+the Hermes `kilo-auto/free` route currently rejects that request. Use an explicit compatible model
+or place a provider-fallback proxy in front of Hindsight.
 
 ## Directory Structure
 
@@ -98,7 +122,7 @@ hermes-infra/
 
 ## Design Principles
 
-- **Zero API costs** — TEI runs locally, Hindsight uses OpenRouter free tier
+- **Local embeddings** — TEI runs locally; Hindsight LLM cost and availability depend on its explicit provider
 - **Live + batch** — Watchman for real-time, cron for catch-up
 - **Memory guardrails** — TEI capped at 2GB RSS, auto-restart on OOM
 - **Guardian-first** — All destructive ops routed through `guardian.sh`

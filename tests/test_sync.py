@@ -1,7 +1,6 @@
 import io
 import json
 import os
-from pathlib import Path
 from types import SimpleNamespace
 
 
@@ -46,7 +45,9 @@ def test_get_col_success_and_failure(load_script, monkeypatch):
     client = SimpleNamespace(get_or_create_collection=lambda name: collection)
     monkeypatch.setattr("chromadb.PersistentClient", lambda **kwargs: client)
     assert sync.get_col() is collection
-    monkeypatch.setattr("chromadb.PersistentClient", lambda **kwargs: (_ for _ in ()).throw(RuntimeError()))
+    monkeypatch.setattr(
+        "chromadb.PersistentClient", lambda **kwargs: (_ for _ in ()).throw(RuntimeError())
+    )
     assert isinstance(sync.get_col(), sync._NullCollection)
 
 
@@ -81,8 +82,9 @@ def test_embed_and_store_writes_and_indexes(load_script, tmp_path, monkeypatch):
     sync = module(load_script)
     monkeypatch.setattr(sync, "embed", lambda chunks: [[1.0]] * len(chunks))
     col = Collection()
-    sync.embed_and_store(col, "docs", "Title", "x" * 2000,
-                         vault_md="markdown", vault_dir=str(tmp_path))
+    sync.embed_and_store(
+        col, "docs", "Title", "x" * 2000, vault_md="markdown", vault_dir=str(tmp_path)
+    )
     assert (tmp_path / "Title.md").read_text(encoding="utf-8") == "markdown"
     assert len(col.calls[0]["ids"]) == 2
     sync.embed_and_store(Collection(fail=True), "docs", "Other", "body")
@@ -102,12 +104,16 @@ def test_gh_helpers(load_script, monkeypatch):
 def test_extract_pdf(load_script, monkeypatch):
     sync = module(load_script)
     page = SimpleNamespace(extract_text=lambda: "text")
+
     class Pdf:
         pages = [page]
+
         def __enter__(self):
             return self
+
         def __exit__(self, *args):
             return False
+
     pdf = Pdf()
     monkeypatch.setattr("pdfplumber.open", lambda path: pdf)
     assert sync.extract_pdf("file.pdf") == "text"
@@ -148,7 +154,11 @@ def test_ensure_symlinks_default_and_profile(load_script, tmp_path, monkeypatch)
     (hermes / "skills").mkdir()
     sync.VAULT = str(tmp_path / "brain")
     original = sync.os.path.expanduser
-    monkeypatch.setattr(sync.os.path, "expanduser", lambda path: path.replace("~", str(home), 1) if path.startswith("~") else original(path))
+    monkeypatch.setattr(
+        sync.os.path,
+        "expanduser",
+        lambda path: path.replace("~", str(home), 1) if path.startswith("~") else original(path),
+    )
     sync._ensure_symlinks()
     destination = tmp_path / "brain" / "System" / "Hermes"
     assert (destination / "MEMORY.md").is_symlink()
@@ -194,7 +204,14 @@ def test_main_source_all_unknown_and_cleanup(load_script, tmp_path, monkeypatch)
     monkeypatch.setattr(sync, "_pause_hindsight_daemon", lambda: calls.append("pause"))
     monkeypatch.setattr(sync, "_resume_hindsight_daemon", lambda: calls.append("resume"))
     monkeypatch.setattr(sync, "get_col", lambda: object())
-    for name in ("sync_github", "sync_apple_notes", "sync_documents", "sync_google_drive", "sync_hindsight", "_sync_memory_facts"):
+    for name in (
+        "sync_github",
+        "sync_apple_notes",
+        "sync_documents",
+        "sync_google_drive",
+        "sync_hindsight",
+        "_sync_memory_facts",
+    ):
         monkeypatch.setattr(sync, name, lambda col, name=name: calls.append(name))
     monkeypatch.setattr(__import__("sys"), "argv", ["sync", "--source", "github"])
     sync.main()
@@ -209,7 +226,7 @@ def test_main_source_all_unknown_and_cleanup(load_script, tmp_path, monkeypatch)
 
 
 def test_sync_documents_routes_and_skips(load_script, tmp_path, monkeypatch):
-    google = load_script("second-brain/scripts/google_sync.py", name="google_sync")
+    load_script("second-brain/scripts/google_sync.py", name="google_sync")
     sync = module(load_script)
     documents = tmp_path / "documents"
     documents.mkdir()

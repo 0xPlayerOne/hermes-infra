@@ -12,7 +12,13 @@ Runs ALL sources into the configured Obsidian vault ($SECOND_BRAIN_DIR) + chroma
 
 CRITICAL SAFETY: route ALL destructive shell commands through ~/.hermes/guardian.sh --confirm.
 """
-import os, re, glob, datetime, subprocess, shutil, time, json
+
+import contextlib
+import datetime
+import json
+import os
+import subprocess
+import time
 from pathlib import Path
 
 HERMES = Path(os.path.expanduser(os.environ.get("HERMES_HOME", "~/.hermes")))
@@ -43,6 +49,7 @@ DIRS = {
 VAULT_SPECIAL = Path(os.path.join(VAULT, SPECIAL_SECTION))
 VAULT_WORK = Path(os.path.join(VAULT, WORK_SECTION))
 
+
 def log(m):
     print(f"[sync] {m}", flush=True)
 
@@ -61,12 +68,16 @@ def write_vault_file(path, content):
 class _NullCollection:
     """No-op chroma stand-in used when the real index is corrupt/unavailable.
     Vault files are still written by callers; vector indexing is skipped."""
+
     def upsert(self, *a, **k):
         pass
+
     def delete(self, *a, **k):
         pass
+
     def count(self):
         return 0
+
     def get(self, *a, **k):
         return {}
 
@@ -74,10 +85,11 @@ class _NullCollection:
 def get_col():
     import chromadb
     from chromadb.config import Settings
+
     try:
         c = chromadb.PersistentClient(
-            path=str(CHROMA_DIR),
-            settings=Settings(anonymized_telemetry=False, allow_reset=True))
+            path=str(CHROMA_DIR), settings=Settings(anonymized_telemetry=False, allow_reset=True)
+        )
         return c.get_or_create_collection(name="second_brain")
     except Exception:
         # corrupt/unavailable index — return null so the Second Brain (vault)
@@ -88,16 +100,20 @@ def get_col():
 def embed(texts):
     """Embed a list of texts via TEI (Qwen/Qwen3-Embedding-0.6B, 1024-dim).
     Batches with short retry; returns list (None per text on failure)."""
-    import urllib.request, json, time
+    import json
+    import urllib.request
+
     out_embs = []
     BATCH = 32  # TEI handles larger batches efficiently
     for i in range(0, len(texts), BATCH):
-        group = texts[i:i + BATCH]
+        group = texts[i : i + BATCH]
         embs = None
         for attempt in range(3):
             try:
                 payload = json.dumps({"model": EMBED_MODEL, "input": group}).encode()
-                req = urllib.request.Request(TEI_EMBED_URL, data=payload, headers={"Content-Type": "application/json"})
+                req = urllib.request.Request(
+                    TEI_EMBED_URL, data=payload, headers={"Content-Type": "application/json"}
+                )
                 with urllib.request.urlopen(req, timeout=30) as resp:
                     data = json.load(resp)
                     embs = [d["embedding"] for d in data["data"]]
@@ -116,10 +132,14 @@ def embed(texts):
 
 def _ensure_tei():
     """Pre-flight: verify TEI embed endpoint is healthy before sync starts."""
-    import urllib.request, json
+    import json
+    import urllib.request
+
     try:
         payload = json.dumps({"model": EMBED_MODEL, "input": ["health"]}).encode()
-        req = urllib.request.Request(TEI_EMBED_URL, data=payload, headers={"Content-Type": "application/json"})
+        req = urllib.request.Request(
+            TEI_EMBED_URL, data=payload, headers={"Content-Type": "application/json"}
+        )
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.load(resp)
             if data.get("data") and len(data["data"][0].get("embedding", [])) == 1024:
@@ -136,18 +156,20 @@ def embed_and_store(col, source, title, body, vault_md=None, vault_dir=None):
         os.makedirs(d, exist_ok=True)
         safe = "".join(c for c in title if c.isalnum() or c in " -_.")[:60]
         write_vault_file(os.path.join(d, f"{safe}.md"), vault_md)
-    chunks = [body[i:i + 1500] for i in range(0, len(body), 1200)]
+    chunks = [body[i : i + 1500] for i in range(0, len(body), 1200)]
     chunks = [c for c in chunks if c.strip()]
     if not chunks:
         return
     embs = embed(chunks)
     ids, docs, metas, good_embs = [], [], [], []
     base = f"{source}:{title}"
-    for i, (ch, e) in enumerate(zip(chunks, embs)):
+    for i, (ch, e) in enumerate(zip(chunks, embs, strict=False)):
         if e is None:
             continue
         cid = f"{base}#{i}"
-        ids.append(cid); docs.append(ch); good_embs.append(e)
+        ids.append(cid)
+        docs.append(ch)
+        good_embs.append(e)
         metas.append({"source": source, "title": title, "chunk": i})
     if ids:
         try:
@@ -172,7 +194,7 @@ def _gh_api(path, jq=None):
 
 def _gh_languages(owner, name):
     """Fetch repo languages as a comma-separated string (e.g. 'TypeScript, Solidity')."""
-    raw = _gh_api(f"repos/{owner}/{name}/languages", jq="keys | join(\", \")")
+    raw = _gh_api(f"repos/{owner}/{name}/languages", jq='keys | join(", ")')
     return (raw or "").strip()
 
 
@@ -198,6 +220,7 @@ def sync_github(col):
             owner, name = owner_name.split("/", 1)
             # Route by configured special/work keywords, then account ownership.
             import google_sync as _gs
+
             _route = _gs.route_text(name, "")
             if _route == "special":
                 vdir = os.path.join(VAULT, SPECIAL_SECTION, "Projects")
@@ -216,6 +239,7 @@ def sync_github(col):
             if not readme:
                 continue
             import base64
+
             try:
                 body = base64.b64decode(readme).decode("utf-8", "ignore")[:2500]
             except Exception:
@@ -223,9 +247,11 @@ def sync_github(col):
             if not body.strip():
                 continue
             langs = _gh_languages(owner, name)
-            vault_md = (f"---\nsource: github\ntitle: {name}\nrepo: {owner_name}\n"
-                        f"languages: {langs}\n"
-                        f"date: {today}\n---\n\n{body}\n")
+            vault_md = (
+                f"---\nsource: github\ntitle: {name}\nrepo: {owner_name}\n"
+                f"languages: {langs}\n"
+                f"date: {today}\n---\n\n{body}\n"
+            )
             embed_and_store(col, "github", name, body, vault_md=vault_md, vault_dir=vdir)
             n += 1
             if idx % 10 == 0:
@@ -241,7 +267,10 @@ def sync_apple_notes(col):
     try:
         cnt_res = subprocess.run(
             ["timeout", "30", "osascript", "-e", 'tell application "Notes" to count notes'],
-            capture_output=True, text=True, timeout=40)
+            capture_output=True,
+            text=True,
+            timeout=40,
+        )
         if cnt_res.returncode != 0:
             log(f"  Apple Notes failed: {cnt_res.stderr[:80]}")
             return
@@ -252,30 +281,33 @@ def sync_apple_notes(col):
         n = 0
         for i in range(1, min(count, 100) + 1):
             # fetch plaintext + folder name for this note
-            script = (f'tell application "Notes"\n'
-                      f'  set n to note {i}\n'
-                      f'  set ptext to plaintext of n\n'
-                      f'  try\n'
-                      f'    set fldr to name of container of n\n'
-                      f'  on error\n'
-                      f'    set fldr to ""\n'
-                      f'  end try\n'
-                      f'  return ptext & "\\n---FOLDER---" & fldr\n'
-                      f'end tell')
+            script = (
+                f'tell application "Notes"\n'
+                f"  set n to note {i}\n"
+                f"  set ptext to plaintext of n\n"
+                f"  try\n"
+                f"    set fldr to name of container of n\n"
+                f"  on error\n"
+                f'    set fldr to ""\n'
+                f"  end try\n"
+                f'  return ptext & "\\n---FOLDER---" & fldr\n'
+                f"end tell"
+            )
             proc = None
             try:
                 proc = subprocess.Popen(
                     ["osascript", "-e", script],
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                    start_new_session=True)
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    start_new_session=True,
+                )
                 try:
                     out, _ = proc.communicate(timeout=8)
                     text = out
                 except subprocess.TimeoutExpired:
-                    try:
+                    with contextlib.suppress(Exception):
                         os.killpg(os.getpgid(proc.pid), 15)
-                    except Exception:
-                        pass
                     proc.wait(timeout=5)
                     text = ""
             except Exception:
@@ -294,18 +326,27 @@ def sync_apple_notes(col):
             today = datetime.date.today().isoformat()
             # Route folder, title, and content through the canonical router.
             import google_sync as _gs
+
             route = _gs.route_text(f"{folder} {title}", body[:3000])
-            notes_dir = (VAULT_SPECIAL / "Notes") if route == "special" else \
-                        (VAULT_WORK / "Notes") if route == "work" else \
-                        (os.path.join(VAULT, PERSONAL_SECTION, "Notes", folder.replace("/", "-").strip())
-                         if folder else os.path.join(VAULT, PERSONAL_SECTION, "Notes"))
+            notes_dir = (
+                (VAULT_SPECIAL / "Notes")
+                if route == "special"
+                else (VAULT_WORK / "Notes")
+                if route == "work"
+                else (
+                    os.path.join(VAULT, PERSONAL_SECTION, "Notes", folder.replace("/", "-").strip())
+                    if folder
+                    else os.path.join(VAULT, PERSONAL_SECTION, "Notes")
+                )
+            )
             # incremental: skip if already synced today
             safe = "".join(c for c in title if c.isalnum() or c in " -_.")[:60]
             existing = os.path.join(notes_dir, f"{safe}.md")
             if os.path.exists(existing):
                 try:
-                    if f"date: {today}" in open(existing, encoding="utf-8").read():
-                        continue  # up-to-date today
+                    with open(existing, encoding="utf-8") as source:
+                        if f"date: {today}" in source.read():
+                            continue  # up-to-date today
                 except Exception:
                     pass
             vault_md = (
@@ -324,6 +365,7 @@ def extract_pdf(fp, max_chars=6000):
     """Extract text from a PDF via pdfplumber (falls back to placeholder on failure)."""
     try:
         import pdfplumber
+
         chunks = []
         with pdfplumber.open(fp) as pdf:
             for page in pdf.pages:
@@ -368,8 +410,11 @@ def sync_documents(col):
             )
             # Route work-keyword documents to Work/Business; otherwise Personal/Documents.
             import google_sync as _gs
+
             _route = _gs.route_text(title, body[:3000])
-            _vdir = os.path.join(VAULT, WORK_SECTION, "Business") if _route == "work" else DIRS["docs"]
+            _vdir = (
+                os.path.join(VAULT, WORK_SECTION, "Business") if _route == "work" else DIRS["docs"]
+            )
             embed_and_store(col, "docs", title, body, vault_md=vault_md, vault_dir=_vdir)
             n += 1
             if n >= 200:
@@ -384,8 +429,10 @@ def sync_google_drive(col):
     log("Google Drive: via google_sync.py — configured keyword routing per file")
     try:
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
-            "google_sync", os.path.join(os.path.dirname(__file__), "google_sync.py"))
+            "google_sync", os.path.join(os.path.dirname(__file__), "google_sync.py")
+        )
         gs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(gs)
         for acc in gs.ACCOUNTS:
@@ -402,15 +449,31 @@ def sync_google_drive(col):
             try:
                 dlist = gs.gapi_get(
                     "https://www.googleapis.com/drive/v3/drives?pageSize=10",
-                    gs.get_creds(acc), acc, f"{acc}/drives")
+                    gs.get_creds(acc),
+                    acc,
+                    f"{acc}/drives",
+                )
                 for d in (dlist or {}).get("drives", []):
-                    gs.sync(acc, drive_vault_dir=base_dir, drive_source="google-drive",
-                            drive_id=d["id"])
+                    gs.sync(
+                        acc, drive_vault_dir=base_dir, drive_source="google-drive", drive_id=d["id"]
+                    )
             except Exception as e:
                 log(f"  google {acc} shared drives skip: {e}")
             # Calendar & Gmail still route by account (they don't have file-level keyword routing)
-            cal_dir = gs.VAULT_CALENDAR if acc == gs.WORK_ACCOUNT else gs.VAULT_PERS_CALENDAR if acc == gs.PERSONAL_ACCOUNT else gs.VAULT_SPECIAL_CAL
-            mail_dir = gs.VAULT_GMAIL if acc == gs.WORK_ACCOUNT else gs.VAULT_PERS_EMAIL if acc == gs.PERSONAL_ACCOUNT else gs.VAULT_SPECIAL_MAIL
+            cal_dir = (
+                gs.VAULT_CALENDAR
+                if acc == gs.WORK_ACCOUNT
+                else gs.VAULT_PERS_CALENDAR
+                if acc == gs.PERSONAL_ACCOUNT
+                else gs.VAULT_SPECIAL_CAL
+            )
+            mail_dir = (
+                gs.VAULT_GMAIL
+                if acc == gs.WORK_ACCOUNT
+                else gs.VAULT_PERS_EMAIL
+                if acc == gs.PERSONAL_ACCOUNT
+                else gs.VAULT_SPECIAL_MAIL
+            )
             gs.sync_calendar(acc, vault_dir=cal_dir, source="google-calendar")
             gs.sync_gmail(acc, vault_dir=mail_dir, source="google-gmail")
             # Sheets are synced during Drive walk (see _drive_walk) — no separate call needed
@@ -423,6 +486,7 @@ def sync_hindsight(col):
     log("Hindsight: via local daemon API")
     try:
         import urllib.request
+
         req = urllib.request.Request("http://127.0.0.1:9177/memories?limit=200")
         with urllib.request.urlopen(req, timeout=10) as r:
             data = json.loads(r.read().decode())
@@ -435,7 +499,8 @@ def sync_hindsight(col):
                 continue
             write_vault_file(
                 os.path.join(DIRS["hindsight"], f"{oid}.md"),
-                f"---\ntype: hindsight-observation\nid: {oid}\ndate: {datetime.date.today()}\n---\n\n{text}\n")
+                f"---\ntype: hindsight-observation\nid: {oid}\ndate: {datetime.date.today()}\n---\n\n{text}\n",
+            )
             n += 1
         log(f"  Hindsight: {n} observations")
     except Exception as e:
@@ -449,8 +514,10 @@ def _sync_memory_facts(col=None):
     log("Memory facts: via export_memories.py")
     try:
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
-            "export_memories", os.path.join(os.path.dirname(__file__), "export_memories.py"))
+            "export_memories", os.path.join(os.path.dirname(__file__), "export_memories.py")
+        )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         mod.export_memory_facts()
@@ -461,20 +528,28 @@ def _sync_memory_facts(col=None):
 
 
 def _pause_hindsight_daemon():
-    subprocess.run(["launchctl", "unload",
-                    os.path.expanduser(os.environ.get(
-                        "HERMES_LAUNCH_AGENTS_DIR", "~/Library/LaunchAgents")) +
-                    "/com.hermes.hindsight.plist"],
-                   capture_output=True)
+    subprocess.run(
+        [
+            "launchctl",
+            "unload",
+            os.path.expanduser(os.environ.get("HERMES_LAUNCH_AGENTS_DIR", "~/Library/LaunchAgents"))
+            + "/com.hermes.hindsight.plist",
+        ],
+        capture_output=True,
+    )
     subprocess.run(["pkill", "-f", "hindsight-api"], capture_output=True)
 
 
 def _resume_hindsight_daemon():
-    subprocess.run(["launchctl", "load",
-                    os.path.expanduser(os.environ.get(
-                        "HERMES_LAUNCH_AGENTS_DIR", "~/Library/LaunchAgents")) +
-                    "/com.hermes.hindsight.plist"],
-                   capture_output=True)
+    subprocess.run(
+        [
+            "launchctl",
+            "load",
+            os.path.expanduser(os.environ.get("HERMES_LAUNCH_AGENTS_DIR", "~/Library/LaunchAgents"))
+            + "/com.hermes.hindsight.plist",
+        ],
+        capture_output=True,
+    )
 
 
 def _ensure_symlinks():
@@ -488,10 +563,7 @@ def _ensure_symlinks():
     profile = os.environ.get("HERMES_PROFILE")
     if profile:
         pbase = os.path.expanduser(f"~/.hermes/profiles/{profile}")
-        if os.path.isdir(pbase):
-            base = pbase
-        else:
-            base = os.path.expanduser("~/.hermes")
+        base = pbase if os.path.isdir(pbase) else os.path.expanduser("~/.hermes")
     else:
         base = os.path.expanduser("~/.hermes")
     links = {
@@ -519,6 +591,7 @@ def _ensure_symlinks():
 
 def main():
     import argparse
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", help="sync only one source")
     args = ap.parse_args()
