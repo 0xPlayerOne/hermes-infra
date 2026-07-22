@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-mise-toml-gen — generate a repo-local .mise.toml from detected stack.
+mise_toml_gen.py — generate a repo-local .mise.toml from detected stack.
 
 Mirrors the agentic-dev-constitution stack detection. Each repo gets ONLY the
 tools it actually needs, pinned to the versions already on the global toolchain
@@ -8,7 +8,7 @@ tools it actually needs, pinned to the versions already on the global toolchain
 those are already global — but declares the pin for reproducibility.
 
 Usage:
-  mise-toml-gen <repo> [--write]   # print (or --write) the .mise.toml
+  mise_toml_gen.py <repo> [--write]   # print (or --write) the .mise.toml
 """
 import os
 import sys
@@ -77,7 +77,7 @@ def main():
     write = "--write" in args
     args = [a for a in args if a != "--write"]
     if not args:
-        print("usage: mise-toml-gen <repo> [--write]", file=sys.stderr)
+        print("usage: mise_toml_gen.py <repo> [--write]", file=sys.stderr)
         sys.exit(1)
     repo = Path(args[0]).resolve()
     if not repo.is_dir():

@@ -28,17 +28,14 @@ mkdir -p ~/.cache/huggingface
 huggingface-cli download Qwen/Qwen3-Embedding-0.6B
 ```
 
-## 3. Create the Launch Script
-
-Use the repo script at `scripts/tei-launch.sh`.
-Make it executable:
+## 3. Build the Rust Supervisor
 
 ```bash
-chmod +x "$HERMES_INFRA_DIR/scripts/tei-launch.sh"
+cargo build --release --manifest-path "$HERMES_INFRA_DIR/Cargo.toml"
 mkdir -p "$HERMES_INFRA_DIR/logs"
 ```
 
-The script starts TEI on port 6999 with:
+The Rust supervisor starts TEI on port 6999 with:
 - `float16` dtype for Metal acceleration
 - 2 GB memory limit guard (monitors RSS every 10s, kills and restarts if exceeded)
 - Conservative batch limits: 512 tokens, 16 concurrent requests

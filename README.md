@@ -53,25 +53,28 @@ cp templates/.env.example .env
 # Edit .env with your paths
 set -a; source .env; set +a
 
-# 4. Create and activate the repo-local Python environment
-./code-index/indexer-setup.sh
+# 4. Build the Rust infrastructure supervisor
+cargo build --release
+
+# 5. Create the isolated data and Hindsight Python environments
+./scripts/setup-python.sh
 source .venv/bin/activate
 
-# 5. Run the indexer
+# 6. Run the indexer
 python code-index/indexer.py --index
 
-# 6. Verify second-brain dependencies and run sync
-./second-brain/scripts/sync-setup.sh
-cd second-brain && python sync.py
+# 7. Run the second-brain sync
+python second-brain/scripts/sync.py
 ```
 
 ## Directory Structure
 
 ```
 hermes-infra/
+├── src/
+│   └── main.rs                 # Rust supervisors: TEI, watcher, MTPLX
 ├── code-index/
 │   ├── indexer.py              # Semantic code indexer (ChromaDB)
-│   └── indexer-setup.sh        # Venv + chromadb setup
 ├── second-brain/
 │   └── scripts/
 │       ├── sync.py             # Unified vault sync (GitHub/Notes/Drive)
@@ -79,11 +82,12 @@ hermes-infra/
 │       ├── export_memories.py  # Dashboard exporter
 │       └── google_sync.py      # Google Drive/Email/Calendar
 ├── scripts/
-│   ├── tei-launch.sh           # TEI launcher with memory guardrails
-│   ├── code-index-watch.sh     # Watchman-based live indexer
-│   ├── agents-md-watchdog      # AGENTS.md coverage checker
-│   ├── repo-standardize        # Auto-stamp AGENTS.md + mise.toml
-│   ├── mise-toml-gen           # Generate .mise.toml for repos
+│   ├── guardian.sh             # Shell safety policy and command gate
+│   ├── setup-python.sh         # Shared uv-managed Python environment
+│   ├── agents_md_watchdog.py   # AGENTS.md coverage checker
+│   ├── agents_md_gen.py        # Stitch generated AGENTS.md bodies
+│   ├── repo_standardize.py     # Auto-stamp AGENTS.md
+│   ├── mise_toml_gen.py        # Generate .mise.toml for repos
 │   └── daily_intel.py          # Daily intelligence briefing
 ├── launchd/                    # Plist templates (sanitized)
 ├── cron/                       # Cron job definitions (sanitized)
@@ -98,7 +102,14 @@ hermes-infra/
 - **Live + batch** — Watchman for real-time, cron for catch-up
 - **Memory guardrails** — TEI capped at 2GB RSS, auto-restart on OOM
 - **Guardian-first** — All destructive ops routed through `guardian.sh`
+- **Rust-first** — supervisors in Rust, data workflows in Python, shell only for bootstrap/policy
 - **Idempotent** — Safe to re-run any component
+
+## Language And Naming
+
+- Rust owns long-running services, process supervision, and state synchronization. Subcommands use `kebab-case`.
+- Python is reserved for data workflows and Python-library integrations. Files use `snake_case.py`.
+- Shell is limited to setup, environment loading, and the Guardian policy. Files use `kebab-case.sh`.
 
 ## License
 

@@ -7,12 +7,14 @@ The repository owns the Hindsight launcher and launchd template. Runtime state r
 - LLM credential: `HINDSIGHT_LLM_API_KEY` in `$HERMES_HOME/.env`
 - Service logs: `$HERMES_INFRA_DIR/logs/hindsight-api.log`
 
-The launcher loads the repository `.env`, the global Hermes `.env`, and then starts the installed Hindsight binary. It configures Hindsight's LLM through the OpenAI-compatible OpenRouter endpoint and uses local TEI for embeddings.
+The Rust launcher loads the repository `.env`, the global Hermes `.env`, and then replaces itself with the installed Hindsight API process. It configures Hindsight's LLM through the OpenAI-compatible OpenRouter endpoint and uses local TEI for embeddings.
 
 ## Install
 
 ```bash
 set -a; source .env; set +a
+cargo build --release
+./scripts/setup-python.sh
 cp launchd/com.hermes.hindsight.plist.example "$HERMES_LAUNCH_AGENTS_DIR/com.hermes.hindsight.plist"
 ```
 

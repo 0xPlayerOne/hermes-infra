@@ -4,6 +4,8 @@
 <dict>
     <key>EnvironmentVariables</key>
     <dict>
+        <key>HERMES_INFRA_DIR</key>
+        <string>/path/to/hermes-infra</string>
         <key>HINDSIGHT_API_EMBEDDINGS_DIM</key>
         <string>1024</string>
         <key>HINDSIGHT_API_EMBEDDINGS_OPENAI_API_KEY</key>
@@ -30,8 +32,8 @@
     <false/>
     <key>ProgramArguments</key>
     <array>
-        <string>/bin/bash</string>
-        <string>/path/to/hermes-infra/scripts/hindsight-launch.sh</string>
+        <string>/path/to/hermes-infra/target/release/hermes-infra</string>
+        <string>hindsight</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
@@ -40,6 +42,6 @@
     <key>StandardOutPath</key>
     <string>/path/to/hermes-infra/logs/hindsight-api.log</string>
     <key>WorkingDirectory</key>
-    <string>$HOME/.hermes/hindsight</string>
+    <string>/path/to/.hermes/hindsight</string>
 </dict>
 </plist>

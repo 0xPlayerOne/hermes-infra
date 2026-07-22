@@ -5,11 +5,16 @@
     <key>Label</key>
     <string>com.hermes.tei</string>
 
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HERMES_INFRA_DIR</key>
+        <string>/path/to/hermes-infra</string>
+    </dict>
+
     <key>ProgramArguments</key>
     <array>
-        <string>/bin/bash</string>
-        <!-- Replace $HOME with your actual home directory path -->
-        <string>/path/to/hermes-infra/scripts/tei-launch.sh</string>
+        <string>/path/to/hermes-infra/target/release/hermes-infra</string>
+        <string>tei</string>
     </array>
 
     <key>RunAtLoad</key>

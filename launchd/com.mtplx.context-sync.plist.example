@@ -4,16 +4,22 @@
 <dict>
     <key>Label</key>
     <string>com.mtplx.context-sync</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HERMES_INFRA_DIR</key>
+        <string>/path/to/hermes-infra</string>
+    </dict>
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/bin/env</string>
-        <string>python3</string>
-        <string>/path/to/hermes-infra/scripts/mtplx-context-sync.py</string>
+        <string>/path/to/hermes-infra/target/release/hermes-infra</string>
+        <string>mtplx-context-sync</string>
     </array>
     <key>StartInterval</key>
     <integer>2</integer>
     <key>RunAtLoad</key>
     <true/>
+    <key>WorkingDirectory</key>
+    <string>/path/to/hermes-infra</string>
     <key>StandardOutPath</key>
     <string>/path/to/hermes-infra/logs/context-sync.log</string>
     <key>StandardErrorPath</key>

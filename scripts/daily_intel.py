@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Daily intelligence briefing for 0xPlayerOne -> delivered to Telegram by Hermes cron."""
+"""Daily intelligence briefing delivered by Hermes cron."""
 import os, subprocess, json, urllib.request, datetime, re, sys
 
 USER = os.environ.get("GITHUB_USER", "")

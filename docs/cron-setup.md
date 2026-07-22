@@ -15,10 +15,7 @@ and optional delivery target (local or Discord channel).
 |-----|----------|-------------|
 | Weekly Knowledge Synthesis | Sunday 23:00 | Extracts facts from conversations → MEMORY.md + Hindsight |
 | Weekly Guardian Audit Review | Sunday 22:00 | Reviews agent safety logs for anomalies |
-| Daily Standup — Ye | Daily 08:00 | System admin standup → #standup |
-| Daily Standup — Angel | Daily 08:01 | Design/social standup → #standup |
-| Daily Standup — Intern | Daily 08:02 | Testing/maintenance standup → #standup |
-| Daily Standup — Satoshi | Daily 08:03 | Blockchain standup → #standup |
+| Daily Standup | Configure per profile | Profile-specific standup → `$STANDUP_CHANNEL` |
 | Hourly APFS Snapshot | Every hour | `tmutil snapshot` for backup safety |
 | Second-Brain Sync | Daily 04:40 | Sync second-brain vault with GitHub |
 | Code Indexer | Daily 05:30 | Re-index `$DEV_ROOT` for semantic search |

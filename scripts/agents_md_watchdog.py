@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-agents-md-watchdog — keeps the configured source root AGENTS.md coverage at 100%.
+agents_md_watchdog.py — keeps the configured source root AGENTS.md coverage at 100%.
 
 Runs after the Code Indexer cron. For every git repo under the configured source root that
 lacks a root AGENTS.md, it:
-  1. drops a constitution-stamp immediately via repo-standardize (so the repo
+  1. drops a constitution-stamp immediately via repo_standardize.py (so the repo
      is never agent-blind, even before a full deep-scan),
   2. prints the gap list to stdout (the cron delivers this; a subagent or the
      user can later run the full 2-stage deep-scan via the agents-md-generation
@@ -13,7 +13,7 @@ lacks a root AGENTS.md, it:
 Repos with a hand-written nested AGENTS.md (e.g. NiftyRoyale) are skipped.
 Repos already stamped by this script are left alone (idempotent).
 
-Usage: agents-md-watchdog [--deep]   (--deep is reserved for the full model
+Usage: agents_md_watchdog.py [--deep]   (--deep is reserved for the full model
 deep-scan workflow; normal cron runs only perform deterministic coverage checks)
 """
 import os
@@ -22,8 +22,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(os.environ.get("HERMES_INFRA_DIR", Path(__file__).resolve().parents[1]))
 DEV = Path(os.path.expanduser(os.environ.get("DEV_ROOT", "~/code")))
-STAMPER = REPO_ROOT / "scripts" / "repo-standardize"
-MISGEN = REPO_ROOT / "scripts" / "mise-toml-gen"
+STAMPER = REPO_ROOT / "scripts" / "repo_standardize.py"
+MISGEN = REPO_ROOT / "scripts" / "mise_toml_gen.py"
 
 def git_roots(dev: Path):
     roots = []
@@ -34,7 +34,7 @@ def git_roots(dev: Path):
     return roots
 
 def detect_stack(r: Path) -> str:
-    """Lightweight stack detection — mirrors repo-standardize logic.
+    """Lightweight stack detection — mirrors repo_standardize.py logic.
     Returns one of: typescript, python, rust, solidity, unity-cs, mixed-ts-py, unknown."""
     ts = py = sol = cs = 0
     unity = False

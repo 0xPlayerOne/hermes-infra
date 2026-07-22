@@ -2,9 +2,7 @@
 """Google sync for the Second Brain.
 
 Syncs (via Google REST API + curl, avoiding httplib2 TLS stalls):
-  - Google Drive (both accounts): andrew My Drive -> Personal/Drive,
-    andy My Drive + Nifty League SHARED -> Nifty League/Drive,
-    angel (Pink Binder org) -> Pink Binder/Drive (recurses folders)
+  - Google Drive accounts route into configured work, personal, and special sections.
   - Google Calendar (both) -> calendar/
   - Gmail metadata (both)        -> gmail/
   - Google Sheets (both)         -> sheets/
@@ -25,18 +23,18 @@ PERSONAL_SECTION = os.environ.get("PERSONAL_SECTION", "Personal")
 SPECIAL_SECTION = os.environ.get("SPECIAL_SECTION", "Special")
 VAULT_DIR = VAULT_ROOT / PERSONAL_SECTION / "Drive"
 VAULT_PERSONAL = VAULT_ROOT / PERSONAL_SECTION
-VAULT_NIFTY = VAULT_ROOT / WORK_SECTION
-VAULT_PINK = VAULT_ROOT / SPECIAL_SECTION
+VAULT_WORK = VAULT_ROOT / WORK_SECTION
+VAULT_SPECIAL = VAULT_ROOT / SPECIAL_SECTION
 VAULT_MEETINGS = VAULT_ROOT / "meetings"
-# Nifty League (andy = work account)
-VAULT_CALENDAR = VAULT_NIFTY / "Calendar"
-VAULT_GMAIL = VAULT_NIFTY / "Email"
-VAULT_SHEETS = VAULT_NIFTY / "Sheets"
-VAULT_NL_DRIVE = VAULT_NIFTY / "Drive"
-VAULT_NL_MEETINGS = VAULT_NIFTY / "Meetings"
-VAULT_NL_PROJECTS = VAULT_NIFTY / "Projects"
-VAULT_NL_BUSINESS = VAULT_NIFTY / "Business"
-# Personal (andrew = personal account)
+# Work account
+VAULT_CALENDAR = VAULT_WORK / "Calendar"
+VAULT_GMAIL = VAULT_WORK / "Email"
+VAULT_SHEETS = VAULT_WORK / "Sheets"
+VAULT_WORK_DRIVE = VAULT_WORK / "Drive"
+VAULT_WORK_MEETINGS = VAULT_WORK / "Meetings"
+VAULT_WORK_PROJECTS = VAULT_WORK / "Projects"
+VAULT_WORK_BUSINESS = VAULT_WORK / "Business"
+# Personal account
 VAULT_PERSONAL_BASE = VAULT_PERSONAL
 VAULT_PERS_CALENDAR = VAULT_PERSONAL / "Calendar"
 VAULT_PERS_EMAIL = VAULT_PERSONAL / "Email"
@@ -46,56 +44,49 @@ VAULT_PERS_MEETINGS = VAULT_PERSONAL / "Meetings"
 VAULT_PERS_NOTES = VAULT_PERSONAL / "Notes"
 VAULT_PERS_DOCS = VAULT_PERSONAL / "Documents"
 VAULT_PERS_PROJECTS = VAULT_PERSONAL / "Projects"
-# Pink Binder (root-level; pokemon from any account + angela = Pink Binder org)
-VAULT_PINK_CAL = VAULT_PINK / "Calendar"
-VAULT_PINK_MAIL = VAULT_PINK / "Email"
-VAULT_PINK_MEET = VAULT_PINK / "Meetings"
-VAULT_PINK_SHEETS = VAULT_PINK / "Sheets"
-VAULT_PINK_DRIVE = VAULT_PINK / "Drive"
-VAULT_PINK_NOTES = VAULT_PINK / "Notes"
-VAULT_PINK_DOCS = VAULT_PINK / "Documents"
-VAULT_PINK_PROJECTS = VAULT_PINK / "Projects"
+# Special account/topic
+VAULT_SPECIAL_CAL = VAULT_SPECIAL / "Calendar"
+VAULT_SPECIAL_MAIL = VAULT_SPECIAL / "Email"
+VAULT_SPECIAL_MEET = VAULT_SPECIAL / "Meetings"
+VAULT_SPECIAL_SHEETS = VAULT_SPECIAL / "Sheets"
+VAULT_SPECIAL_DRIVE = VAULT_SPECIAL / "Drive"
+VAULT_SPECIAL_NOTES = VAULT_SPECIAL / "Notes"
+VAULT_SPECIAL_DOCS = VAULT_SPECIAL / "Documents"
+VAULT_SPECIAL_PROJECTS = VAULT_SPECIAL / "Projects"
 CHROMA_DIR = HERMES / "second-brain-chroma"
 EMBED_MODEL = os.environ.get("EMBED_MODEL", "Qwen/Qwen3-Embedding-0.6B")
-ACCOUNTS = ["andy", "andrew", "angel"]
+WORK_ACCOUNT = os.environ.get("GOOGLE_WORK_ACCOUNT", "work")
+PERSONAL_ACCOUNT = os.environ.get("GOOGLE_PERSONAL_ACCOUNT", "personal")
+SPECIAL_ACCOUNT = os.environ.get("GOOGLE_SPECIAL_ACCOUNT", "special")
+ACCOUNTS = list(dict.fromkeys([WORK_ACCOUNT, PERSONAL_ACCOUNT, SPECIAL_ACCOUNT]))
 
 # ============================================================================
-# CANONICAL ROUTING  (single source of truth — all sources import from here)
-# Hard rule:
-#   Nifty League  <- nifty / nftl / crypto / degen / smashers / bacon / battle town / web3 gaming
-#   Pink Binder   <- pokemon / whatnot / ebay / cards / tcg / pokémon
-#   Personal      <- everything else
+# Canonical routing. Keywords are configured in the local environment.
 # ============================================================================
-NIFTY_KEYS = ["nifty", "niftyleague", "nftl", "crypto", "degen", "smashers",
-              "bacon", "battle town", "web3 gaming", "free-to-play", "f2p",
-              "scott", "ali", "snarfy", "timnak"]
-PINK_KEYS = ["pokemon", "pokémon", "poke", "pogo", "squirtle", "pikachu",
-             "charizard", "tcg", "tcge", "tcgplayer", "whatnot", "ebay",
-             "cards", "sparklez", "binders?", "illustration rare", "holo",
-             "psa", "graded", "booster"]
+WORK_KEYS = [item.strip() for item in os.environ.get(
+    "WORK_ROUTE_KEYWORDS", "work,business").split(",") if item.strip()]
+SPECIAL_KEYS = [item.strip() for item in os.environ.get(
+    "SPECIAL_ROUTE_KEYWORDS", "special").split(",") if item.strip()]
 
 import re as _re
-_NIFTY_RE = _re.compile("|".join(NIFTY_KEYS), _re.I)
-_PINK_RE = _re.compile("|".join(PINK_KEYS), _re.I)
+_WORK_RE = _re.compile("|".join(map(_re.escape, WORK_KEYS)), _re.I)
+_SPECIAL_RE = _re.compile("|".join(map(_re.escape, SPECIAL_KEYS)), _re.I)
 
 
-def is_pokemon(name):
-    """Pokemon / TCG / trading-card content -> Pink Binder (any account)."""
-    return bool(_PINK_RE.search(name or ""))
+def is_special(name):
+    return bool(_SPECIAL_RE.search(name or ""))
 
 
-def is_nifty_league(name, text=""):
-    """Nifty League content -> Nifty League folder (any account)."""
-    return bool(_NIFTY_RE.search(name or "")) or bool(_NIFTY_RE.search(text or ""))
+def is_work(name, text=""):
+    return bool(_WORK_RE.search(name or "")) or bool(_WORK_RE.search(text or ""))
 
 
 def route_text(name, text=""):
-    """Return 'pink' | 'nifty' | 'personal' based on the hard rule.
-    Pink takes priority over Nifty when both match (pokemon > nifty)."""
-    if is_pokemon(name) or is_pokemon(text):
-        return "pink"
-    if is_nifty_league(name, text):
-        return "nifty"
+    """Return special, work, or personal according to configured keywords."""
+    if is_special(name) or is_special(text):
+        return "special"
+    if is_work(name, text):
+        return "work"
     return "personal"
 
 
@@ -363,16 +354,11 @@ def sync_gmail(account, vault_dir=None, source="google-gmail"):
 
 def is_meeting_doc(name):
     """Heuristic: Drive docs that are meeting/call transcripts get routed to
-    the meetings/ folder instead of Nifty League/Meetings or Personal/Meetings."""
+    the meetings folder instead of a generic Drive destination."""
     n = (name or "").lower()
     keys = ["meet", "transcript", "notes by gemini", "meeting", "company sync",
             "call", "1:1", "standup", "sync -", " sync "]
     return any(k in n for k in keys)
-
-
-def is_nifty_league(name, text=""):
-    """Nifty League content -> Nifty League folder (any account)."""
-    return bool(_NIFTY_RE.search(name or "")) or bool(_NIFTY_RE.search(text or ""))
 
 
 def _drive_list(creds, account, parent=None, drive_id=None):
@@ -477,19 +463,13 @@ def _folder_all_images(creds, account, parent, drive_id=None):
 def _resolve_vault_dir(base_dir, path_parts, name, text=""):
     """Return the vault section root.
 
-    Hard rule:
-      - Pokemon / TCG / binder content -> Pink Binder/Drive, regardless of account
-      - EVERYTHING ELSE -> stays on the account's default root (base_dir)
-
-    This preserves the exact Drive folder hierarchy under the correct account
-    vault. Nifty League folders like Education/Career/Archive/Read AI Notes
-    stay in Nifty League/Drive because they come from andy. Personal folders
-    stay in Personal/Drive because they come from andrew.
+    Special-topic content moves to the configured special section. Everything
+    else remains under the account's default root.
     """
     full = "/".join(path_parts + ([name] if name else []))
     route = route_text(full, text)
-    if route == "pink":
-        return VAULT_PINK_DRIVE
+    if route == "special":
+        return VAULT_SPECIAL_DRIVE
     return base_dir
 
 
@@ -569,8 +549,8 @@ def sync(account, drive_vault_dir=None, drive_source="google-drive", drive_id=No
         return
     col = get_col()
     base_dir = (Path(drive_vault_dir) if drive_vault_dir
-                else VAULT_PINK_DRIVE if account == "angel"
-                else VAULT_NL_DRIVE if account == "andy"
+                else VAULT_SPECIAL_DRIVE if account == SPECIAL_ACCOUNT
+                else VAULT_WORK_DRIVE if account == WORK_ACCOUNT
                 else VAULT_PERS_DRIVE)
     try:
         start_parent = drive_id if drive_id else "root"
@@ -637,7 +617,7 @@ def oauth_auth(account):
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("--auth", help="run interactive OAuth for an account (andy|andrew)")
+    ap.add_argument("--auth", help="run interactive OAuth for a configured account")
     ap.add_argument("--account", help="sync a specific account (default: all configured)")
     args = ap.parse_args()
 
@@ -653,26 +633,26 @@ def main():
         if not get_creds(acc):
             log(f"  {acc}: no credentials (skip)")
             continue
-        # ANDY: personal My Drive -> Nifty League/Drive, Nifty League shared -> Nifty League/Drive
-        # ANDREW: personal My Drive -> Personal/Drive
-        # ANGEL: Pink Binder org -> Pink Binder/Drive (folder recursion)
-        if acc == "andy":
-            sync(acc, drive_vault_dir=VAULT_NL_DRIVE, drive_source="nifty-drive")
+        if acc == WORK_ACCOUNT:
+            sync(acc, drive_vault_dir=VAULT_WORK_DRIVE, drive_source="work-drive")
+            calendar_dir, mail_dir = VAULT_CALENDAR, VAULT_GMAIL
             # shared drives
             try:
                 dlist = gapi_get(
                     "https://www.googleapis.com/drive/v3/drives?pageSize=10",
                     get_creds(acc), acc, f"{acc}/drives")
                 for d in (dlist or {}).get("drives", []):
-                    sync(acc, drive_vault_dir=VAULT_NL_DRIVE, drive_source="nifty-drive", drive_id=d["id"])
+                    sync(acc, drive_vault_dir=VAULT_WORK_DRIVE, drive_source="work-drive", drive_id=d["id"])
             except Exception as e:
                 log(f"  {acc}: shared drives skip: {e}")
-        elif acc == "angel":
-            sync(acc, drive_vault_dir=VAULT_PINK_DRIVE, drive_source="pink-drive")
+        elif acc == SPECIAL_ACCOUNT:
+            sync(acc, drive_vault_dir=VAULT_SPECIAL_DRIVE, drive_source="special-drive")
+            calendar_dir, mail_dir = VAULT_SPECIAL_CAL, VAULT_SPECIAL_MAIL
         else:
             sync(acc, drive_vault_dir=VAULT_PERS_DRIVE, drive_source="personal-drive")
-        sync_calendar(acc, vault_dir=VAULT_CALENDAR, source="google-calendar")
-        sync_gmail(acc, vault_dir=VAULT_GMAIL, source="google-gmail")
+            calendar_dir, mail_dir = VAULT_PERS_CALENDAR, VAULT_PERS_EMAIL
+        sync_calendar(acc, vault_dir=calendar_dir, source="google-calendar")
+        sync_gmail(acc, vault_dir=mail_dir, source="google-gmail")
     log("DONE")
 
 

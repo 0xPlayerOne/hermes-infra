@@ -2,11 +2,11 @@
 """Second-Brain unified sync orchestrator.
 
 Runs ALL sources into the configured Obsidian vault ($SECOND_BRAIN_DIR) + chroma:
-  github/        — repos + READMEs (gh CLI) -> Nifty League/Projects + Personal/Projects
+  github/        — repos + READMEs (gh CLI) -> Work/Projects + Personal/Projects
   apple-notes/   — Notes.app (osascript; blank notes auto-skipped) -> routed by folder/keyword
-  documents/     — ~/Documents (PDF text via pdfplumber) -> Personal/Documents or Nifty League/Business
+  documents/     — $DOCUMENTS_DIR (PDF text) -> Personal/Documents or Work/Business
   Google Drive/Email/Calendar/Sheets (via google_sync.py API) -> routed by KEYWORD per file:
-      pokemon/tcg/whatnot -> Pink Binder, nifty/nftl/crypto -> Nifty League, else -> Personal
+      configured special keywords -> Special, work keywords -> Work, else -> Personal
   hindsight/     — Hindsight observations (in System/Hermes/)
   memory-facts/  — Hermes memory facts + Hindsight (export_memories.py, in System/Hermes/)
 
@@ -32,9 +32,7 @@ DIRS = {
     "notes": os.path.join(VAULT, PERSONAL_SECTION, "Notes"),
     "docs": os.path.join(VAULT, PERSONAL_SECTION, "Documents"),
     "personal-drive": os.path.join(VAULT, PERSONAL_SECTION, "Drive"),
-    "nifty-drive": os.path.join(VAULT, WORK_SECTION, "Drive"),
     "meetings": os.path.join(VAULT, WORK_SECTION, "Meetings"),
-    "nifty-docs": os.path.join(VAULT, WORK_SECTION, "Business"),
     "calendar": os.path.join(VAULT, WORK_SECTION, "Calendar"),
     "gmail": os.path.join(VAULT, WORK_SECTION, "Email"),
     "sheets": os.path.join(VAULT, WORK_SECTION, "Sheets"),
@@ -42,8 +40,8 @@ DIRS = {
     "memory": os.path.join(VAULT, "System", "Hermes", "memory-facts"),
 }
 
-VAULT_PINK = Path(os.path.join(VAULT, SPECIAL_SECTION))
-VAULT_NIFTY = Path(os.path.join(VAULT, WORK_SECTION))
+VAULT_SPECIAL = Path(os.path.join(VAULT, SPECIAL_SECTION))
+VAULT_WORK = Path(os.path.join(VAULT, WORK_SECTION))
 
 def log(m):
     print(f"[sync] {m}", flush=True)
@@ -57,15 +55,7 @@ def write_vault_file(path, content):
     os.replace(tmp, path)
 
 
-# Routing is centralized in google_sync.py (NIFTY_KEYS / PINK_KEYS / is_pokemon /
-# is_nifty_league / route_text). Import gs in the callers that need it.
-POKEMON_HELPER = None  # placeholder; use gs.is_pokemon at call sites
-
-
-def is_pokemon(name):
-    """Delegates to the canonical google_sync.is_pokemon (single source of truth)."""
-    import google_sync as _gs
-    return _gs.is_pokemon(name)
+# Routing is centralized in google_sync.py.
 
 
 class _NullCollection:
@@ -189,10 +179,13 @@ def _gh_languages(owner, name):
 def sync_github(col):
     log("GitHub: fetching repos + metadata + READMEs + markdown docs")
     today = datetime.date.today().isoformat()
-    # user repos + NiftyLeague org repos, excluding archived
+    # User repos plus an optional configured work organization, excluding archived.
     names = []
-    for src in ("user/repos?affiliation=owner,collaborator",
-                "orgs/NiftyLeague/repos?per_page=100"):
+    work_owner = os.environ.get("WORK_GITHUB_OWNER", "").strip()
+    sources = ["user/repos?affiliation=owner,collaborator"]
+    if work_owner:
+        sources.append(f"orgs/{work_owner}/repos?per_page=100")
+    for src in sources:
         raw = _gh_api(src, jq=".[] | select(.archived | not) | .full_name")
         if raw:
             names += [n for n in raw.split("\n") if n.strip()]
@@ -203,12 +196,12 @@ def sync_github(col):
     for idx, owner_name in enumerate(names[:80], 1):
         try:
             owner, name = owner_name.split("/", 1)
-            # route by canonical rule (pink > nifty > personal)
+            # Route by configured special/work keywords, then account ownership.
             import google_sync as _gs
             _route = _gs.route_text(name, "")
-            if _route == "pink":
+            if _route == "special":
                 vdir = os.path.join(VAULT, SPECIAL_SECTION, "Projects")
-            elif owner == "NiftyLeague" or _route == "nifty":
+            elif owner == work_owner or _route == "work":
                 vdir = os.path.join(VAULT, WORK_SECTION, "Projects")
             else:
                 vdir = os.path.join(VAULT, PERSONAL_SECTION, "Projects")
@@ -297,21 +290,13 @@ def sync_apple_notes(col):
             if not body.strip() or body.strip() in ("￼",):
                 continue
             today = datetime.date.today().isoformat()
-            # route by priority (matches the vault hard rule):
-            #  1) Apple Notes folder name -> matching vault section (Nifty League / Pink Binder / Personal)
-            #  2) text/source heuristics via canonical router (pink > nifty > personal)
+            # Route folder, title, and content through the canonical router.
             import google_sync as _gs
-            fol_l = (folder or "").lower()
-            if "nifty" in fol_l:
-                notes_dir = VAULT_NIFTY / "Notes"
-            elif "pink binder" in fol_l:
-                notes_dir = VAULT_PINK / "Notes"
-            else:
-                r = _gs.route_text(title, body[:3000])
-                notes_dir = (VAULT_PINK / "Notes") if r == "pink" else \
-                            (VAULT_NIFTY / "Notes") if r == "nifty" else \
-                            (os.path.join(VAULT, "Personal", "Notes", folder.replace("/", "-").strip())
-                             if folder else os.path.join(VAULT, "Personal", "Notes"))
+            route = _gs.route_text(f"{folder} {title}", body[:3000])
+            notes_dir = (VAULT_SPECIAL / "Notes") if route == "special" else \
+                        (VAULT_WORK / "Notes") if route == "work" else \
+                        (os.path.join(VAULT, PERSONAL_SECTION, "Notes", folder.replace("/", "-").strip())
+                         if folder else os.path.join(VAULT, PERSONAL_SECTION, "Notes"))
             # incremental: skip if already synced today
             safe = "".join(c for c in title if c.isalnum() or c in " -_.")[:60]
             existing = os.path.join(notes_dir, f"{safe}.md")
@@ -378,10 +363,10 @@ def sync_documents(col):
                 f"---\nsource: docs\ntitle: {title}\nfile: {f}\n"
                 f"date: {datetime.date.today().isoformat()}\n---\n\n{body}\n"
             )
-            # route by canonical rule: nifty -> Nifty League/Business, else Personal/Documents
+            # Route work-keyword documents to Work/Business; otherwise Personal/Documents.
             import google_sync as _gs
             _route = _gs.route_text(title, body[:3000])
-            _vdir = os.path.join(VAULT, WORK_SECTION, "Business") if _route == "nifty" else DIRS["docs"]
+            _vdir = os.path.join(VAULT, WORK_SECTION, "Business") if _route == "work" else DIRS["docs"]
             embed_and_store(col, "docs", title, body, vault_md=vault_md, vault_dir=_vdir)
             n += 1
             if n >= 200:
@@ -393,24 +378,21 @@ def sync_documents(col):
 
 # ---------- Google (via google_sync.py) ----------
 def sync_google_drive(col):
-    log("Google Drive: via google_sync.py — keyword routing per file (pink > nifty > personal)")
+    log("Google Drive: via google_sync.py — configured keyword routing per file")
     try:
         import importlib.util
         spec = importlib.util.spec_from_file_location(
             "google_sync", os.path.join(os.path.dirname(__file__), "google_sync.py"))
         gs = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(gs)
-        for acc in ["andy", "andrew", "angel"]:
+        for acc in gs.ACCOUNTS:
             if not gs.get_creds(acc):
                 log(f"  google {acc}: no creds (skip)")
                 continue
-            # base_dir is just the DEFAULT — google_sync._drive_walk now applies
-            # keyword routing per-file (pink > nifty > personal), so files automatically
-            # land in Pink Binder/Drive, Nifty League/Drive, or Personal/Drive regardless of account
-            if acc == "andy":
-                base_dir = gs.VAULT_NL_DRIVE
-            elif acc == "angel":
-                base_dir = gs.VAULT_PINK_DRIVE
+            if acc == gs.WORK_ACCOUNT:
+                base_dir = gs.VAULT_WORK_DRIVE
+            elif acc == gs.SPECIAL_ACCOUNT:
+                base_dir = gs.VAULT_SPECIAL_DRIVE
             else:
                 base_dir = gs.VAULT_PERS_DRIVE
             gs.sync(acc, drive_vault_dir=base_dir, drive_source="google-drive")
@@ -424,8 +406,8 @@ def sync_google_drive(col):
             except Exception as e:
                 log(f"  google {acc} shared drives skip: {e}")
             # Calendar & Gmail still route by account (they don't have file-level keyword routing)
-            cal_dir = gs.VAULT_CALENDAR if acc == "andy" else gs.VAULT_PERS_CALENDAR if acc == "andrew" else gs.VAULT_PINK_CAL
-            mail_dir = gs.VAULT_GMAIL if acc == "andy" else gs.VAULT_PERS_EMAIL if acc == "andrew" else gs.VAULT_PINK_MAIL
+            cal_dir = gs.VAULT_CALENDAR if acc == gs.WORK_ACCOUNT else gs.VAULT_PERS_CALENDAR if acc == gs.PERSONAL_ACCOUNT else gs.VAULT_SPECIAL_CAL
+            mail_dir = gs.VAULT_GMAIL if acc == gs.WORK_ACCOUNT else gs.VAULT_PERS_EMAIL if acc == gs.PERSONAL_ACCOUNT else gs.VAULT_SPECIAL_MAIL
             gs.sync_calendar(acc, vault_dir=cal_dir, source="google-calendar")
             gs.sync_gmail(acc, vault_dir=mail_dir, source="google-gmail")
             # Sheets are synced during Drive walk (see _drive_walk) — no separate call needed
@@ -473,15 +455,6 @@ def _sync_memory_facts(col=None):
         log("  Memory facts: exported")
     except Exception as e:
         log(f"  Memory facts errored: {e}")
-
-
-def _warm_model():
-    try:
-        import ollama
-        client = ollama.Client(timeout=30)
-        client.embed(model=EMBED_MODEL, input=["warm"] * 1, options={"keep_alive": -1})
-    except Exception:
-        pass
 
 
 def _pause_hindsight_daemon():

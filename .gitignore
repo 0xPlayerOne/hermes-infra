@@ -19,6 +19,8 @@ second-brain/synthesis-log.md
 code-index-venv/
 venv/
 .venv/
+.hindsight-venv/
+target/
 __pycache__/
 *.pyc
 
@@ -33,6 +35,7 @@ hindsight/*.env
 *.db-shm
 *.db-wal
 *.lock
+!Cargo.lock
 state.db
 
 # === OS ===

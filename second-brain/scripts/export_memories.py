@@ -128,13 +128,13 @@ _Generated {datetime.datetime.now().isoformat()}_
 ## Vault structure (PARA)
 - `Daily/` — daily notes (YYYY-MM-DD.md, append-only)
 - `System/Assistant/` — `context.md`, `preferences.md`, `environment.md`, `logs/issues-fixes-log.md`
-- `People/` — contacts, relationships, MOC ([[People/Andrew]])
+- `People/` — contacts and relationships
 - `Inbox/` — unclassified incoming (file later)
-- `Nifty League/` — **work**: Calendar/, Email/, Sheets/, Drive/, Meetings/, Projects/ (NiftyLeague repos), Business/ (nifty-docs)
-- `Personal/` — **personal**: Calendar/, Email/, Sheets/, Drive/, Meetings/, Projects/ (user repos), Notes/ (apple-notes), Documents/
-- `Pink Binder/` — Pokémon / TCG content (any account): Sheets/, Notes/, Drive/, Projects/
+- `{WORK_SECTION}/` — work: Calendar/, Email/, Sheets/, Drive/, Meetings/, Projects/, Business/
+- `{PERSONAL_SECTION}/` — personal: Calendar/, Email/, Sheets/, Drive/, Meetings/, Projects/, Notes/, Documents/
+- `{SPECIAL_SECTION}/` — configured special-topic content
 - `System/Hermes/` — agent meta (symlinks + sync scripts + hindsight/memory-facts)
-- Account mapping: **work account → Nifty League**, **personal account → Personal**. Pokémon → Pink Binder regardless of account. Nifty League content → Nifty League folder.
+- Account and keyword routing are configured through the local environment.
 
 ## How to use
 1. Open this vault in Obsidian.
@@ -151,12 +151,12 @@ hermes/
   USER.md   ──┼─ (symlinked, live)
   SOUL.md   ──┘
   skills/       (symlinked, live)
-  Nifty League/   Personal/   Pink Binder/   (each: Calendar Email Sheets Drive Meetings Notes Projects Documents [Business for Nifty])
+  {WORK_SECTION}/   {PERSONAL_SECTION}/   {SPECIAL_SECTION}/
   People/  System/  Daily/
   System/Hermes/  ── sync scripts + agent meta (MEMORY/USER/SOUL/skills symlinks, hindsight/, memory-facts/)
    Sync scripts in System/Hermes/: sync.py + google_sync.py + export_memories.py
-  Data sources (incremental): github/ apple-notes/ documents/ nifty-drive(personal-drive)/ calendar/ gmail/ sheets/ nifty-docs/
-  └─ (routed into Nifty League/ Personal/ Pink Binder/ sections by account + content)
+  Data sources (incremental): github/ apple-notes/ documents/ drive/ calendar/ gmail/ sheets/
+  └─ (routed into configured work, personal, and special sections)
 ```
 """)
 

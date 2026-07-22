@@ -5,11 +5,11 @@ This repository is the source of truth for Hermes infrastructure implementations
 ## Repository-owned
 
 - Code indexing: `code-index/indexer.py`, `.venv`, Chroma state under the configured `CHROMA_DIR`
-- Embeddings: `scripts/tei-launch.sh`
-- Live indexing: `scripts/code-index-watch.sh`
-- Hindsight service: `scripts/hindsight-launch.sh`
+- Embeddings: `hermes-infra tei` (Rust)
+- Live indexing: `hermes-infra code-index-watch` (Rust)
+- Hindsight service: `hermes-infra hindsight` (Rust)
 - Command safety gate: `scripts/guardian.sh`
-- MTPLX context synchronization: `scripts/mtplx-context-sync.py`
+- MTPLX context synchronization: `hermes-infra mtplx-context-sync` (Rust)
 - Second-brain sync and maintenance: `second-brain/scripts/`
 - Cron prompt templates: `cron/`
 - launchd templates: `launchd/`
@@ -33,3 +33,8 @@ curl -fsS http://127.0.0.1:9177/health
 ```
 
 Do not edit implementation files in `~/.hermes` or the second-brain vault. Update this repository and reload the affected launchd service.
+
+Python dependencies are intentionally split because ChromaDB 0.5.23 and Hindsight 0.8.4 require incompatible `tokenizers` versions:
+
+- `.venv`: code index and second-brain workflows
+- `.hindsight-venv`: Hindsight API only

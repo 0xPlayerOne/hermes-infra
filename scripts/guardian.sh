@@ -23,7 +23,13 @@
 
 set -u
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_SOURCE" ]; do
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+  SCRIPT_SOURCE="$(readlink "$SCRIPT_SOURCE")"
+  [[ "$SCRIPT_SOURCE" != /* ]] && SCRIPT_SOURCE="$SCRIPT_DIR/$SCRIPT_SOURCE"
+done
+REPO_ROOT="$(cd "$(dirname "$SCRIPT_SOURCE")/.." && pwd)"
 ENV_FILE="${HERMES_INFRA_ENV_FILE:-$REPO_ROOT/.env}"
 if [ -f "$ENV_FILE" ]; then
   set -a

@@ -24,7 +24,7 @@ CHROMA_DIR = Path(os.environ.get("CHROMA_DIR", os.path.expanduser("~/.hermes/cod
 # CODE INDEX EMBEDDING MODEL — LOCKED.
 # This index is built exclusively for Qwen/Qwen3-Embedding-0.6B via TEI (Metal).
 # Mixing any other model corrupts cosine search (vectors not comparable).
-# TEI serves OpenAI-compatible /v1/embeddings on localhost:3000.
+# TEI serves OpenAI-compatible /v1/embeddings on localhost:6999.
 _LOCKED_MODEL = "Qwen/Qwen3-Embedding-0.6B"
 MODEL = _LOCKED_MODEL
 # 0.6B default dim = 1024 (under chroma/HNSW limits).
