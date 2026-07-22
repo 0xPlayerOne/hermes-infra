@@ -1,6 +1,7 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--strict-markers --strict-config"
+markers = ["live: requires local Hermes launchd services"]
 
 [tool.coverage.run]
 branch = true

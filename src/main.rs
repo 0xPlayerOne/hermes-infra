@@ -190,6 +190,7 @@ fn run_tei() -> Result<()> {
     let model = value(&values, "EMBED_MODEL", "Qwen/Qwen3-Embedding-0.6B");
     let memory_limit_kb: u64 =
         value(&values, "TEI_MEMORY_LIMIT_BYTES", "2147483648").parse::<u64>()? / 1024;
+    eprintln!("hermes-infra tei: starting {model} on 127.0.0.1:{port}");
     let stopping = Arc::new(AtomicBool::new(false));
     let signal = Arc::clone(&stopping);
     ctrlc::set_handler(move || signal.store(true, Ordering::SeqCst))?;
@@ -227,6 +228,7 @@ fn run_tei() -> Result<()> {
         let _ = child.kill();
         return Err("TEI did not become healthy within 120 seconds".into());
     }
+    eprintln!("hermes-infra tei: healthy on 127.0.0.1:{port}");
 
     loop {
         if stopping.load(Ordering::SeqCst) {
@@ -238,6 +240,7 @@ fn run_tei() -> Result<()> {
             return Err(format!("TEI exited: {status}").into());
         }
         if child_rss_kb(&child).is_some_and(|rss| rss > memory_limit_kb) {
+            eprintln!("hermes-infra tei: RSS exceeded {memory_limit_kb} KiB");
             let _ = child.kill();
             let _ = child.wait();
             return Err("TEI exceeded its memory limit".into());
@@ -297,6 +300,10 @@ fn run_code_index_watch() -> Result<()> {
     let mut clock = watchman_clock(&watchman, &watch_root)?;
     let poll_seconds: u64 = value(&values, "WATCH_POLL_SECONDS", "5").parse()?;
     let debounce_seconds: u64 = value(&values, "WATCH_DEBOUNCE_SECONDS", "60").parse()?;
+    eprintln!(
+        "hermes-infra code-index-watch: watching {}",
+        watch_root.display()
+    );
     let busy = PathBuf::from(value(&values, "TMPDIR", "/tmp")).join("hermes-code-index-busy");
     let mut pending_since = None;
     loop {
@@ -333,7 +340,7 @@ fn run_code_index_watch() -> Result<()> {
         match status {
             Ok(status) if !status.success() => eprintln!("indexer exited: {status}"),
             Err(error) => eprintln!("indexer failed: {error}"),
-            _ => {}
+            Ok(status) => eprintln!("indexer completed: {status}"),
         }
         pending_since = None;
     }
