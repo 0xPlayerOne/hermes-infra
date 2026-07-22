@@ -32,7 +32,7 @@ def git_roots(dev: Path):
         if ".git" in dirs:
             roots.append(Path(root))
             dirs[:] = []  # don't descend into sub-repos
-    return roots
+    return sorted(roots)
 
 def detect_stack(r: Path) -> str:
     """Lightweight stack detection — mirrors repo_standardize.py logic.
