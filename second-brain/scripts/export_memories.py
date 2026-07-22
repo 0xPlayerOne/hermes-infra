@@ -67,7 +67,9 @@ def export_hindsight():
     try:
         import urllib.request
 
-        req = urllib.request.Request("http://127.0.0.1:9177/memories?limit=200")
+        req = urllib.request.Request(
+            "http://127.0.0.1:9177/v1/default/banks/hermes/memories/list?limit=200"
+        )
         with urllib.request.urlopen(req, timeout=10) as r:
             data = json.loads(r.read().decode())
         obs = data if isinstance(data, list) else data.get("memories", [])

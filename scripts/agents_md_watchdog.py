@@ -28,6 +28,42 @@ STAMPER = REPO_ROOT / "scripts" / "repo_standardize.py"
 MISGEN = REPO_ROOT / "scripts" / "mise_toml_gen.py"
 
 
+def curl_ok(url: str, timeout: int = 5) -> str:
+    try:
+        out = subprocess.run(
+            [
+                "curl",
+                "-sf",
+                "--max-time",
+                str(timeout),
+                "-o",
+                "/dev/null",
+                "-w",
+                "%{http_code}",
+                url,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=timeout + 5,
+        )
+        code = out.stdout.strip()
+        if out.returncode != 0 or not code.isdigit() or code != "200":
+            return f"unreachable/failed (http={code})"
+        return f"healthy (http={code})"
+    except Exception as exc:
+        return f"error: {exc}"
+
+
+def infra_health() -> tuple[str, str]:
+    if os.environ.get("WATCHDOG_INFRA_CHECKS") != "1":
+        return "skipped", "skipped"
+    hindsight = curl_ok("http://127.0.0.1:9177/health")
+    tei_health = curl_ok("http://127.0.0.1:6999/health")
+    if tei_health.startswith("healthy"):
+        return hindsight, tei_health
+    return hindsight, curl_ok("http://127.0.0.1:6999/health")
+
+
 def git_roots(dev: Path):
     roots = []
     for root, dirs, _files in os.walk(dev):
@@ -91,6 +127,9 @@ def detect_stack(r: Path) -> str:
 
 
 def main():
+    hindsight_state, tei_state = infra_health()
+    print(f"INFRA: Hindsight={hindsight_state}; TEI={tei_state}")
+
     roots = git_roots(DEV)
     gaps = []
     stamped = []
