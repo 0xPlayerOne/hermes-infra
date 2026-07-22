@@ -35,7 +35,7 @@ MEMORY_MD = os.path.join(HERMES, "MEMORY.md")
 USER_MD = os.path.join(HERMES, "USER.md")
 VAULT = os.path.expanduser(os.environ.get("SECOND_BRAIN_DIR", "~/second-brain"))
 MEM_FACTS_DIR = os.path.join(VAULT, "System", "Hermes", "memory-facts")
-HINDSIGHT_URL = "http://127.0.0.1:9177/memories"
+HINDSIGHT_URL = "http://127.0.0.1:9177/v1/default/banks/hermes/memories/list?limit=200"
 
 LOOKBACK_DAYS = 7
 
