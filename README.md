@@ -107,9 +107,22 @@ hermes-infra/
 
 ## Language And Naming
 
-- Rust owns long-running services, process supervision, and state synchronization. Subcommands use `kebab-case`.
-- Python is reserved for data workflows and Python-library integrations. Files use `snake_case.py`.
-- Shell is limited to setup, environment loading, and the Guardian policy. Files use `kebab-case.sh`.
+The language choice is based on responsibility, not preference alone:
+
+| Language | Use it for | Why |
+|----------|------------|-----|
+| **Rust** | Long-running services, process supervision, health monitoring, Watchman polling, state synchronization | Strong lifecycle/error handling, low overhead, and reliable daemon behavior |
+| **Python** | ChromaDB, Google APIs, PDF extraction, vault/data transformation, plist rendering, and tests | These workflows depend on mature Python libraries and are dominated by API/data handling rather than process supervision |
+| **Shell** | Guardian command policy, environment/bootstrap setup, and simple system-maintenance composition | These tasks directly intercept shell commands or orchestrate native tools such as `uv`, `cargo`, Homebrew, and `launchctl` |
+
+All new code must follow these rules:
+
+- Rust owns long-running infrastructure. CLI subcommands use `kebab-case`.
+- Python owns data workflows and Python-library integrations. Files use `snake_case.py`.
+- Shell is a last resort for bootstrap, environment loading, policy enforcement, and simple maintenance. Files use `kebab-case.sh`.
+- Do not convert Python data workflows to Rust solely for language uniformity; that would replace stable library integrations with custom OAuth, HTTP, PDF, and database code.
+- Do not convert Guardian or bootstrap scripts to Rust when direct shell semantics are their purpose.
+- Any new executable must be classified against this table in its code review and covered by the corresponding Rust/Python test gate.
 
 ## Testing
 
