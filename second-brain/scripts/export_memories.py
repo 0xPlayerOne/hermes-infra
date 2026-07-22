@@ -17,7 +17,9 @@ import glob
 import json
 import os
 
-VAULT = os.path.expanduser(os.environ.get("SECOND_BRAIN_DIR", "~/second-brain"))
+from path_utils import resolve_path
+
+VAULT = resolve_path(os.environ.get("SECOND_BRAIN_DIR", "~/second-brain"))
 WORK_SECTION = os.environ.get("WORK_SECTION", "Work")
 PERSONAL_SECTION = os.environ.get("PERSONAL_SECTION", "Personal")
 SPECIAL_SECTION = os.environ.get("SPECIAL_SECTION", "Special")

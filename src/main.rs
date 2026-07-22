@@ -50,8 +50,17 @@ fn repo_root() -> Result<PathBuf> {
 
 fn expand_path(value: &str, values: &HashMap<String, String>) -> PathBuf {
     let mut expanded = value.to_string();
-    if expanded == "$HOME" || expanded.starts_with("$HOME/") {
-        expanded = expanded.replacen("$HOME", &home().to_string_lossy(), 1);
+    if expanded == "$HOME"
+        || expanded.starts_with("$HOME/")
+        || expanded == "${HOME}"
+        || expanded.starts_with("${HOME}/")
+    {
+        let marker = if expanded.starts_with("${HOME}") {
+            "${HOME}"
+        } else {
+            "$HOME"
+        };
+        expanded = expanded.replacen(marker, &home().to_string_lossy(), 1);
     } else if expanded == "~" || expanded.starts_with("~/") {
         expanded = expanded.replacen('~', &home().to_string_lossy(), 1);
     }

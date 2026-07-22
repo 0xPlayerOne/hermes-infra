@@ -29,11 +29,13 @@ import os
 import re
 import urllib.request
 
-HERMES = os.path.expanduser(os.environ.get("HERMES_HOME", "~/.hermes"))
+from path_utils import resolve_path
+
+HERMES = resolve_path(os.environ.get("HERMES_HOME", "~/.hermes"))
 STATE_DB = os.path.join(HERMES, "state.db")
 MEMORY_MD = os.path.join(HERMES, "MEMORY.md")
 USER_MD = os.path.join(HERMES, "USER.md")
-VAULT = os.path.expanduser(os.environ.get("SECOND_BRAIN_DIR", "~/second-brain"))
+VAULT = resolve_path(os.environ.get("SECOND_BRAIN_DIR", "~/second-brain"))
 MEM_FACTS_DIR = os.path.join(VAULT, "System", "Hermes", "memory-facts")
 HINDSIGHT_URL = "http://127.0.0.1:9177/v1/default/banks/hermes/memories/list?limit=200"
 

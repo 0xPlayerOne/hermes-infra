@@ -37,10 +37,22 @@ if [ -f "$ENV_FILE" ]; then
   source "$ENV_FILE"
   set +a
 fi
-HERMES_HOME="${HERMES_HOME:-$HOME/.hermes}"
-DEV_ROOT="${DEV_ROOT:-$HOME/code}"
-SECOND_BRAIN_DIR="${SECOND_BRAIN_DIR:-$HOME/second-brain}"
-SECOND_BRAIN_TRASH_DIR="${SECOND_BRAIN_TRASH_DIR:-$HOME/Desktop/trash-drive-flat}"
+
+resolve_path() {
+  local value="$1"
+  value="${value//\$\{HOME\}/$HOME}"
+  value="${value//\$HOME/$HOME}"
+  case "$value" in
+    "~/"*) value="$HOME/${value#~/}" ;;
+    "~") value="$HOME" ;;
+  esac
+  printf '%s' "$value"
+}
+
+HERMES_HOME="$(resolve_path "${HERMES_HOME:-$HOME/.hermes}")"
+DEV_ROOT="$(resolve_path "${DEV_ROOT:-$HOME/code}")"
+SECOND_BRAIN_DIR="$(resolve_path "${SECOND_BRAIN_DIR:-$HOME/second-brain}")"
+SECOND_BRAIN_TRASH_DIR="$(resolve_path "${SECOND_BRAIN_TRASH_DIR:-$HOME/Desktop/trash-drive-flat}")"
 CODE_INDEX_DIR="${HERMES_INFRA_DIR:-$REPO_ROOT}/code-index"
 
 # ---------------------------------------------------------------------------

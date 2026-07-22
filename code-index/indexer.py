@@ -28,8 +28,14 @@ import threading
 import time
 from pathlib import Path
 
-DEV_ROOT = Path(os.path.expanduser(os.environ.get("DEV_ROOT", "~/code")))
-CHROMA_DIR = Path(os.environ.get("CHROMA_DIR", os.path.expanduser("~/.hermes/code-index/chroma")))
+
+def resolve_path(value):
+    """Expand shell-style environment variables and a leading home marker."""
+    return os.path.expanduser(os.path.expandvars(value))
+
+
+DEV_ROOT = Path(resolve_path(os.environ.get("DEV_ROOT", "~/code")))
+CHROMA_DIR = Path(resolve_path(os.environ.get("CHROMA_DIR", "~/.hermes/code-index/chroma")))
 # CODE INDEX EMBEDDING MODEL — LOCKED.
 # This index is built exclusively for Qwen/Qwen3-Embedding-0.6B via TEI (Metal).
 # Mixing any other model corrupts cosine search (vectors not comparable).
@@ -39,9 +45,7 @@ MODEL = _LOCKED_MODEL
 # 0.6B default dim = 1024 (under chroma/HNSW limits).
 EMBED_DIM = 1024
 STATE_FILE = Path(
-    os.path.expanduser(
-        os.environ.get("CODE_INDEX_STATE_FILE", "~/.hermes/code-index/manifest.json")
-    )
+    resolve_path(os.environ.get("CODE_INDEX_STATE_FILE", "~/.hermes/code-index/manifest.json"))
 )
 
 
@@ -379,7 +383,7 @@ EMBED_BATCH_DELAY = 0.05
 # TEI Metal occasionally wedges under sustained load (hangs at 0% CPU).
 # When that happens we restart it via launchd and retry the batch.
 TEI_PLIST = os.path.join(
-    os.path.expanduser(os.environ.get("HERMES_LAUNCH_AGENTS_DIR", "~/Library/LaunchAgents")),
+    resolve_path(os.environ.get("HERMES_LAUNCH_AGENTS_DIR", "~/Library/LaunchAgents")),
     "com.hermes.tei.plist",
 )
 _tei_restart_in_progress = False

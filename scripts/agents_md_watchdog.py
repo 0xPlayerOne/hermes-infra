@@ -22,8 +22,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+
+def resolve_path(value):
+    """Expand shell-style environment variables and a leading home marker."""
+    return os.path.expanduser(os.path.expandvars(value))
+
+
 REPO_ROOT = Path(os.environ.get("HERMES_INFRA_DIR", Path(__file__).resolve().parents[1]))
-DEV = Path(os.path.expanduser(os.environ.get("DEV_ROOT", "~/code")))
+DEV = Path(resolve_path(os.environ.get("DEV_ROOT", "~/code")))
 STAMPER = REPO_ROOT / "scripts" / "repo_standardize.py"
 MISGEN = REPO_ROOT / "scripts" / "mise_toml_gen.py"
 

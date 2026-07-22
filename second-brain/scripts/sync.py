@@ -21,8 +21,10 @@ import subprocess
 import time
 from pathlib import Path
 
-HERMES = Path(os.path.expanduser(os.environ.get("HERMES_HOME", "~/.hermes")))
-VAULT = os.path.expanduser(os.environ.get("SECOND_BRAIN_DIR", "~/second-brain"))
+from path_utils import resolve_path
+
+HERMES = Path(resolve_path(os.environ.get("HERMES_HOME", "~/.hermes")))
+VAULT = resolve_path(os.environ.get("SECOND_BRAIN_DIR", "~/second-brain"))
 WORK_SECTION = os.environ.get("WORK_SECTION", "Work")
 PERSONAL_SECTION = os.environ.get("PERSONAL_SECTION", "Personal")
 SPECIAL_SECTION = os.environ.get("SPECIAL_SECTION", "Special")
@@ -382,7 +384,7 @@ def extract_pdf(fp, max_chars=6000):
 
 def sync_documents(col):
     log("Local Documents: scanning + PDF extraction")
-    docs_root = os.path.expanduser(os.environ.get("DOCUMENTS_DIR", "~/Documents"))
+    docs_root = resolve_path(os.environ.get("DOCUMENTS_DIR", "~/Documents"))
     exts = {".md", ".txt", ".pdf", ".docx", ".rtf", ".pages"}
     n = 0
     for root, dirs, files in os.walk(docs_root):
@@ -534,7 +536,7 @@ def _pause_hindsight_daemon():
         [
             "launchctl",
             "unload",
-            os.path.expanduser(os.environ.get("HERMES_LAUNCH_AGENTS_DIR", "~/Library/LaunchAgents"))
+            resolve_path(os.environ.get("HERMES_LAUNCH_AGENTS_DIR", "~/Library/LaunchAgents"))
             + "/com.hermes.hindsight.plist",
         ],
         capture_output=True,
@@ -547,7 +549,7 @@ def _resume_hindsight_daemon():
         [
             "launchctl",
             "load",
-            os.path.expanduser(os.environ.get("HERMES_LAUNCH_AGENTS_DIR", "~/Library/LaunchAgents"))
+            resolve_path(os.environ.get("HERMES_LAUNCH_AGENTS_DIR", "~/Library/LaunchAgents"))
             + "/com.hermes.hindsight.plist",
         ],
         capture_output=True,
@@ -564,10 +566,10 @@ def _ensure_symlinks():
     # determine active profile base
     profile = os.environ.get("HERMES_PROFILE")
     if profile:
-        pbase = os.path.expanduser(f"~/.hermes/profiles/{profile}")
-        base = pbase if os.path.isdir(pbase) else os.path.expanduser("~/.hermes")
+        pbase = resolve_path(f"~/.hermes/profiles/{profile}")
+        base = pbase if os.path.isdir(pbase) else resolve_path("~/.hermes")
     else:
-        base = os.path.expanduser("~/.hermes")
+        base = resolve_path("~/.hermes")
     links = {
         "MEMORY.md": os.path.join(base, "MEMORY.md"),
         "USER.md": os.path.join(base, "USER.md"),

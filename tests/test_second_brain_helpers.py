@@ -14,6 +14,25 @@ class Response(io.BytesIO):
         return False
 
 
+def test_resolve_path_expands_home_variables(load_script, monkeypatch, tmp_path):
+    module = load_script("second-brain/scripts/path_utils.py")
+    monkeypatch.setenv("HOME", str(tmp_path))
+    assert module.resolve_path("$HOME/Developer/second-brain") == str(
+        tmp_path / "Developer" / "second-brain"
+    )
+    assert module.resolve_path("${HOME}/Documents") == str(tmp_path / "Documents")
+    assert module.resolve_path("~/second-brain") == str(tmp_path / "second-brain")
+
+
+def test_resolve_path_leaves_no_literal_home_prefix(load_script, monkeypatch, tmp_path):
+    module = load_script("second-brain/scripts/path_utils.py")
+    monkeypatch.setenv("HOME", str(tmp_path))
+    for value in ("$HOME/data", "${HOME}/data", "~/data"):
+        resolved = Path(module.resolve_path(value))
+        assert resolved.is_absolute()
+        assert "$HOME" not in resolved.parts
+
+
 def test_export_memory_facts_and_bad_json(load_script, tmp_path, monkeypatch):
     module = load_script("second-brain/scripts/export_memories.py")
     memory = tmp_path / "memory"

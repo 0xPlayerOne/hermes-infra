@@ -23,15 +23,16 @@ from urllib.parse import urlencode
 
 import chromadb
 from chromadb.config import Settings
+from path_utils import resolve_path
 
-HERMES = Path(os.path.expanduser(os.environ.get("HERMES_HOME", "~/.hermes")))
+HERMES = Path(resolve_path(os.environ.get("HERMES_HOME", "~/.hermes")))
 CREDS_FILE = (
     HERMES / "google-oauth.keys.json"
     if os.path.exists(HERMES / "google-oauth.keys.json")
     else HERMES / "gcp-oauth.keys.json"
 )
 TOKEN_DIR = HERMES / "google-tokens"
-VAULT_ROOT = Path(os.path.expanduser(os.environ.get("SECOND_BRAIN_DIR", "~/second-brain")))
+VAULT_ROOT = Path(resolve_path(os.environ.get("SECOND_BRAIN_DIR", "~/second-brain")))
 WORK_SECTION = os.environ.get("WORK_SECTION", "Work")
 PERSONAL_SECTION = os.environ.get("PERSONAL_SECTION", "Personal")
 SPECIAL_SECTION = os.environ.get("SPECIAL_SECTION", "Special")

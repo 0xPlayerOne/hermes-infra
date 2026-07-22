@@ -26,11 +26,13 @@ import sys
 import time
 from pathlib import Path
 
+from path_utils import resolve_path
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-BRAIN_ROOT = Path(os.path.expanduser(os.environ.get("BRAIN_ROOT", "~/Developer/second-brain")))
-CHROMA_DIR = Path(os.environ.get("CHROMA_DIR", os.path.expanduser("~/.hermes/code-index/chroma")))
+BRAIN_ROOT = Path(resolve_path(os.environ.get("BRAIN_ROOT", "~/Developer/second-brain")))
+CHROMA_DIR = Path(resolve_path(os.environ.get("CHROMA_DIR", "~/.hermes/code-index/chroma")))
 COLLECTION = "second-brain"
 STATE_FILE = CHROMA_DIR / "brain_state.json"
 
