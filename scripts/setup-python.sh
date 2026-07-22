@@ -17,6 +17,7 @@ if [ ! -x "$VENV_DIR/bin/python" ]; then
 fi
 
 uv pip install --python "$VENV_DIR/bin/python" --requirement "$REPO_ROOT/requirements.txt"
+uv pip install --python "$VENV_DIR/bin/python" --requirement "$REPO_ROOT/requirements-dev.txt"
 if [ ! -x "$HINDSIGHT_VENV/bin/python" ]; then
     uv venv --python 3.11 "$HINDSIGHT_VENV"
 fi

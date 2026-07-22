@@ -3,15 +3,15 @@ use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::env;
 use std::fs::{self, File, OpenOptions};
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, ExitCode, Stdio};
+use std::process::{Child, Command, ExitCode};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -93,10 +93,16 @@ fn load_env_file(path: &Path, values: &mut HashMap<String, String>) -> Result<()
 }
 
 fn config() -> Result<HashMap<String, String>> {
-    let root = repo_root()?;
+    config_from(&repo_root()?, env::vars())
+}
+
+fn config_from<I>(root: &Path, process_vars: I) -> Result<HashMap<String, String>>
+where
+    I: IntoIterator<Item = (String, String)>,
+{
     let mut values = HashMap::new();
     load_env_file(&root.join(".env"), &mut values)?;
-    for (key, value) in env::vars() {
+    for (key, value) in process_vars {
         values.insert(key, value);
     }
     Ok(values)
@@ -194,6 +200,8 @@ fn run_tei() -> Result<()> {
             &model,
             "--dtype",
             "float16",
+            "--hostname",
+            "127.0.0.1",
             "--port",
             &port.to_string(),
             "--max-batch-tokens",
@@ -285,29 +293,33 @@ fn run_code_index_watch() -> Result<()> {
         return Err("TEI is unavailable".into());
     }
 
-    let status = Command::new(&watchman)
-        .args(["watch", &watch_root.to_string_lossy()])
-        .status()?;
-    if !status.success() {
-        return Err("watchman watch failed".into());
-    }
-    let mut child = Command::new(&watchman)
-        .args([
-            "subscribe",
-            &watch_root.to_string_lossy(),
-            "hermes-code-index",
-            r#"{"fields":["name","size","mtime_ms"]}"#,
-        ])
-        .stdout(Stdio::piped())
-        .spawn()?;
-    let stdout = child.stdout.take().ok_or("watchman stdout unavailable")?;
+    watchman_json(&watchman, &["watch-project", &watch_root.to_string_lossy()])?;
+    let mut clock = watchman_clock(&watchman, &watch_root)?;
+    let poll_seconds: u64 = value(&values, "WATCH_POLL_SECONDS", "5").parse()?;
+    let debounce_seconds: u64 = value(&values, "WATCH_DEBOUNCE_SECONDS", "60").parse()?;
     let busy = PathBuf::from(value(&values, "TMPDIR", "/tmp")).join("hermes-code-index-busy");
-    for line in BufReader::new(stdout).lines() {
-        let line = line?;
-        if !line.contains("\"subscription\"") && !line.contains("\"subscribe\"") {
+    let mut pending_since = None;
+    loop {
+        thread::sleep(Duration::from_secs(poll_seconds));
+        match watchman_json(&watchman, &["since", &watch_root.to_string_lossy(), &clock]) {
+            Ok(response) => {
+                if let Some(next_clock) = response.get("clock").and_then(Value::as_str) {
+                    clock = next_clock.to_string();
+                }
+                if watchman_change_count(&response) > 0 {
+                    pending_since = Some(Instant::now());
+                }
+            }
+            Err(error) => {
+                eprintln!("watchman query failed: {error}");
+                continue;
+            }
+        }
+        if !pending_since
+            .is_some_and(|started| started.elapsed() >= Duration::from_secs(debounce_seconds))
+        {
             continue;
         }
-        thread::sleep(Duration::from_secs(60));
         let Ok(lock) = OpenOptions::new().write(true).create_new(true).open(&busy) else {
             continue;
         };
@@ -318,12 +330,42 @@ fn run_code_index_watch() -> Result<()> {
             .status();
         drop(lock);
         let _ = fs::remove_file(&busy);
-        if let Err(error) = status {
-            eprintln!("indexer failed: {error}");
+        match status {
+            Ok(status) if !status.success() => eprintln!("indexer exited: {status}"),
+            Err(error) => eprintln!("indexer failed: {error}"),
+            _ => {}
         }
+        pending_since = None;
     }
-    let status = child.wait()?;
-    Err(format!("watchman subscription exited: {status}").into())
+}
+
+fn watchman_json(watchman: &Path, args: &[&str]) -> Result<Value> {
+    let output = Command::new(watchman).args(args).output()?;
+    if !output.status.success() {
+        return Err(format!(
+            "watchman {} failed: {}",
+            args.first().copied().unwrap_or("command"),
+            String::from_utf8_lossy(&output.stderr).trim()
+        )
+        .into());
+    }
+    Ok(serde_json::from_slice(&output.stdout)?)
+}
+
+fn watchman_clock(watchman: &Path, watch_root: &Path) -> Result<String> {
+    let response = watchman_json(watchman, &["clock", &watch_root.to_string_lossy()])?;
+    response
+        .get("clock")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .ok_or_else(|| "watchman clock response is missing clock".into())
+}
+
+fn watchman_change_count(response: &Value) -> usize {
+    response
+        .get("files")
+        .and_then(Value::as_array)
+        .map_or(0, Vec::len)
 }
 
 fn run_hindsight() -> Result<()> {
@@ -468,6 +510,37 @@ fn model_family(model: &str, live: Option<&str>) -> Option<&'static str> {
     }
 }
 
+fn reconcile_mtplx_settings(
+    settings: &mut Map<String, Value>,
+    prefs: &mut Map<String, Value>,
+) -> (bool, bool) {
+    let before_prefs = prefs.clone();
+    prefs.entry("qwen3_6").or_insert(Value::from(131072));
+    prefs.entry("gemma4").or_insert(Value::from(131072));
+    let model = settings.get("model").and_then(Value::as_str).unwrap_or("");
+    let live = settings
+        .get("live_settings_model_family")
+        .and_then(Value::as_str);
+    let Some(family) = model_family(model, live) else {
+        return (false, *prefs != before_prefs);
+    };
+    let stored_family = settings
+        .get("context_window_model_family")
+        .and_then(Value::as_str);
+    let context = settings.get("context_window").and_then(Value::as_i64);
+    if stored_family == Some(family) && context.is_some_and(|number| number > 0 && number != 262144)
+    {
+        prefs.insert(family.into(), Value::from(context.unwrap()));
+    }
+    let target = prefs.get(family).and_then(Value::as_i64).unwrap_or(131072);
+    let settings_changed = context != Some(target) || stored_family != Some(family);
+    if settings_changed {
+        settings.insert("context_window".into(), Value::from(target));
+        settings.insert("context_window_model_family".into(), Value::from(family));
+    }
+    (settings_changed, *prefs != before_prefs)
+}
+
 fn run_mtplx_context_sync() -> Result<()> {
     let values = config()?;
     let settings_path = expand_path(
@@ -504,28 +577,11 @@ fn run_mtplx_context_sync() -> Result<()> {
     lock.lock_exclusive()?;
     let mut settings = read_json(&settings_path)?;
     let mut prefs = read_json(&prefs_path)?;
-    prefs.entry("qwen3_6").or_insert(Value::from(131072));
-    prefs.entry("gemma4").or_insert(Value::from(131072));
-    let model = settings.get("model").and_then(Value::as_str).unwrap_or("");
-    let live = settings
-        .get("live_settings_model_family")
-        .and_then(Value::as_str);
-    let Some(family) = model_family(model, live) else {
-        return Ok(());
-    };
-    let stored_family = settings
-        .get("context_window_model_family")
-        .and_then(Value::as_str);
-    let context = settings.get("context_window").and_then(Value::as_i64);
-    if stored_family == Some(family) && context.is_some_and(|number| number > 0 && number != 262144)
-    {
-        prefs.insert(family.into(), Value::from(context.unwrap()));
+    let (settings_changed, prefs_changed) = reconcile_mtplx_settings(&mut settings, &mut prefs);
+    if prefs_changed {
         write_json(&prefs_path, &prefs)?;
     }
-    let target = prefs.get(family).and_then(Value::as_i64).unwrap_or(131072);
-    if context != Some(target) || stored_family != Some(family) {
-        settings.insert("context_window".into(), Value::from(target));
-        settings.insert("context_window_model_family".into(), Value::from(family));
+    if settings_changed {
         write_json(&settings_path, &settings)?;
         println!("mtplx-context-sync: restored per-family context window");
     }
@@ -536,6 +592,16 @@ fn run_mtplx_context_sync() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::net::TcpListener;
+    use std::os::unix::fs::PermissionsExt;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static NEXT_ID: AtomicU64 = AtomicU64::new(1);
+
+    fn temp_path(name: &str) -> PathBuf {
+        let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+        env::temp_dir().join(format!("hermes-infra-{name}-{}-{id}", std::process::id()))
+    }
 
     #[test]
     fn infers_supported_model_families() {
@@ -556,11 +622,224 @@ mod tests {
 
     #[test]
     fn expands_forward_dotenv_references() {
-        let path = env::temp_dir().join(format!("hermes-infra-env-{}", std::process::id()));
+        let path = temp_path("env");
         fs::write(&path, "ALIAS=$VALUE\nVALUE=resolved\n").unwrap();
         let mut values = HashMap::new();
         load_env_file(&path, &mut values).unwrap();
         fs::remove_file(path).unwrap();
         assert_eq!(values.get("ALIAS").map(String::as_str), Some("resolved"));
+    }
+
+    #[test]
+    fn loads_dotenv_comments_quotes_overrides_and_missing_files() {
+        let path = temp_path("dotenv-cases");
+        fs::write(
+            &path,
+            "# comment\n\nA=first\nB='quoted'\nMALFORMED\nA=second\nC=${B}/child\n",
+        )
+        .unwrap();
+        let mut values = HashMap::new();
+        load_env_file(&path, &mut values).unwrap();
+        assert_eq!(values.get("A").map(String::as_str), Some("second"));
+        assert_eq!(values.get("B").map(String::as_str), Some("quoted"));
+        assert_eq!(values.get("C").map(String::as_str), Some("quoted/child"));
+        fs::remove_file(path).unwrap();
+        load_env_file(&temp_path("missing"), &mut values).unwrap();
+    }
+
+    #[test]
+    fn expands_home_braces_unknowns_and_empty_paths() {
+        let values = HashMap::from([("ROOT".to_string(), "/tmp/root".to_string())]);
+        assert_eq!(
+            expand_path("${ROOT}/data", &values),
+            PathBuf::from("/tmp/root/data")
+        );
+        assert_eq!(
+            expand_path("$UNKNOWN/data", &values),
+            PathBuf::from("$UNKNOWN/data")
+        );
+        assert_eq!(expand_path("", &values), PathBuf::from(""));
+        assert!(expand_path("~/data", &values).is_absolute());
+        assert!(expand_path("$HOME/data", &values).is_absolute());
+    }
+
+    #[test]
+    fn value_uses_configured_or_default_value() {
+        let values = HashMap::from([("KEY".to_string(), "configured".to_string())]);
+        assert_eq!(value(&values, "KEY", "default"), "configured");
+        assert_eq!(value(&values, "MISSING", "default"), "default");
+    }
+
+    #[test]
+    fn config_from_loads_file_and_process_overrides() {
+        let dir = temp_path("config");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join(".env"), "FROM_FILE=yes\nOVERRIDE=file\n").unwrap();
+        let values = config_from(
+            &dir,
+            [
+                ("OVERRIDE".to_string(), "process".to_string()),
+                ("PROCESS_ONLY".to_string(), "yes".to_string()),
+            ],
+        )
+        .unwrap();
+        assert_eq!(values.get("FROM_FILE").map(String::as_str), Some("yes"));
+        assert_eq!(values.get("OVERRIDE").map(String::as_str), Some("process"));
+        assert_eq!(values.get("PROCESS_ONLY").map(String::as_str), Some("yes"));
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn finds_explicit_and_path_executables() {
+        let dir = temp_path("executables");
+        fs::create_dir_all(&dir).unwrap();
+        let executable = dir.join("tool");
+        fs::write(&executable, "#!/bin/sh\nexit 0\n").unwrap();
+        let mut permissions = fs::metadata(&executable).unwrap().permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&executable, permissions).unwrap();
+        let explicit =
+            HashMap::from([("TOOL_BIN".to_string(), executable.to_string_lossy().into())]);
+        assert_eq!(
+            find_executable(&explicit, "TOOL_BIN", "tool").unwrap(),
+            executable
+        );
+        let path = HashMap::from([("PATH".to_string(), dir.to_string_lossy().into())]);
+        assert_eq!(
+            find_executable(&path, "MISSING", "tool").unwrap(),
+            executable
+        );
+        assert!(find_executable(&HashMap::new(), "MISSING", "definitely-not-a-command").is_err());
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    fn health_server(status: &'static str) -> (u16, thread::JoinHandle<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let handle = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0; 256];
+            let _ = stream.read(&mut request);
+            write!(stream, "HTTP/1.1 {status}\r\nContent-Length: 0\r\n\r\n").unwrap();
+        });
+        (port, handle)
+    }
+
+    #[test]
+    fn health_accepts_200_and_rejects_other_statuses() {
+        let (port, handle) = health_server("200 OK");
+        assert!(health(port));
+        handle.join().unwrap();
+        let (port, handle) = health_server("503 Unavailable");
+        assert!(!health(port));
+        handle.join().unwrap();
+    }
+
+    #[test]
+    fn health_rejects_closed_port() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        drop(listener);
+        assert!(!health(port));
+    }
+
+    #[test]
+    fn reports_live_child_rss() {
+        let mut child = Command::new("sleep").arg("1").spawn().unwrap();
+        assert!(child_rss_kb(&child).is_some());
+        child.kill().unwrap();
+        child.wait().unwrap();
+    }
+
+    #[test]
+    fn json_helpers_cover_missing_invalid_non_object_and_round_trip() {
+        let dir = temp_path("json");
+        let path = dir.join("nested/data.json");
+        assert!(read_json(&path).unwrap().is_empty());
+        let mut data = Map::new();
+        data.insert("answer".into(), Value::from(42));
+        write_json(&path, &data).unwrap();
+        assert_eq!(
+            read_json(&path)
+                .unwrap()
+                .get("answer")
+                .and_then(Value::as_i64),
+            Some(42)
+        );
+        fs::write(&path, "[1, 2]").unwrap();
+        assert!(read_json(&path).unwrap().is_empty());
+        fs::write(&path, "{bad").unwrap();
+        assert!(read_json(&path).is_err());
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn watchman_helpers_parse_success_and_errors() {
+        let dir = temp_path("watchman");
+        fs::create_dir_all(&dir).unwrap();
+        let script = dir.join("watchman");
+        fs::write(
+            &script,
+            "#!/bin/sh\nif [ \"$1\" = fail ]; then echo broken >&2; exit 1; fi\necho '{\"clock\":\"c:1\",\"files\":[\"a\",\"b\"]}'\n",
+        )
+        .unwrap();
+        let mut permissions = fs::metadata(&script).unwrap().permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&script, permissions).unwrap();
+        let response = watchman_json(&script, &["since"]).unwrap();
+        assert_eq!(watchman_change_count(&response), 2);
+        assert_eq!(watchman_clock(&script, Path::new("/tmp")).unwrap(), "c:1");
+        assert!(watchman_json(&script, &["fail"]).is_err());
+        assert_eq!(watchman_change_count(&Value::Null), 0);
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn reconciles_mtplx_family_defaults_and_changes() {
+        let mut settings = Map::from_iter([
+            ("model".into(), Value::from("Qwen3.6")),
+            ("context_window".into(), Value::from(65536)),
+            ("context_window_model_family".into(), Value::from("qwen3_6")),
+        ]);
+        let mut prefs = Map::new();
+        let (settings_changed, prefs_changed) = reconcile_mtplx_settings(&mut settings, &mut prefs);
+        assert!(!settings_changed);
+        assert!(prefs_changed);
+        assert_eq!(prefs.get("qwen3_6").and_then(Value::as_i64), Some(65536));
+    }
+
+    #[test]
+    fn reconciles_mtplx_model_switch_and_ignores_unknown_model() {
+        let mut settings = Map::from_iter([
+            ("model".into(), Value::from("Gemma4")),
+            ("context_window".into(), Value::from(32768)),
+            ("context_window_model_family".into(), Value::from("qwen3_6")),
+        ]);
+        let mut prefs = Map::from_iter([("gemma4".into(), Value::from(98304))]);
+        let (settings_changed, _) = reconcile_mtplx_settings(&mut settings, &mut prefs);
+        assert!(settings_changed);
+        assert_eq!(
+            settings.get("context_window").and_then(Value::as_i64),
+            Some(98304)
+        );
+        assert_eq!(
+            settings
+                .get("context_window_model_family")
+                .and_then(Value::as_str),
+            Some("gemma4")
+        );
+
+        let mut unknown = Map::from_iter([("model".into(), Value::from("unknown"))]);
+        let mut empty = Map::new();
+        let (changed, prefs_changed) = reconcile_mtplx_settings(&mut unknown, &mut empty);
+        assert!(!changed);
+        assert!(prefs_changed);
+    }
+
+    #[test]
+    fn model_family_is_case_insensitive_and_live_setting_wins() {
+        assert_eq!(model_family("GEMMA", None), Some("gemma4"));
+        assert_eq!(model_family("qwen", Some("gemma4")), Some("gemma4"));
+        assert_eq!(model_family("qwen", Some("unknown")), Some("qwen3_6"));
     }
 }

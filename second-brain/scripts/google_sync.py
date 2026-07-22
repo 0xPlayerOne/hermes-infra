@@ -165,11 +165,13 @@ def load_creds(account):
     p = TOKEN_DIR / f"{account}.json"
     if not p.exists():
         return None
-    return json.loads(p.read_text())
+    return json.loads(p.read_text(encoding="utf-8"))
 
 
 def save_creds(account, creds):
-    (TOKEN_DIR / f"{account}.json").write_text(json.dumps(creds, indent=2))
+    TOKEN_DIR.mkdir(parents=True, exist_ok=True)
+    (TOKEN_DIR / f"{account}.json").write_text(
+        json.dumps(creds, indent=2), encoding="utf-8")
 
 
 def refresh_token(account, creds):
@@ -218,8 +220,11 @@ def get_creds(account):
     exp = creds.get("expiry")
     if exp:
         try:
-            exp_dt = datetime.datetime.fromisoformat(exp.replace("Z", ""))
-            if exp_dt < datetime.datetime.utcnow():
+            exp_dt = datetime.datetime.fromisoformat(exp.replace("Z", "+00:00"))
+            now = datetime.datetime.now(datetime.timezone.utc)
+            if exp_dt.tzinfo is None:
+                now = now.replace(tzinfo=None)
+            if exp_dt < now:
                 creds = refresh_token(account, creds)
         except Exception:
             creds = refresh_token(account, creds)

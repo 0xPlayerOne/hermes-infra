@@ -118,14 +118,17 @@ def load_existing_facts():
     existing = set()
     for path in (MEMORY_MD, USER_MD):
         if os.path.exists(path):
-            for line in open(path).read().splitlines():
+            with open(path, encoding="utf-8") as source:
+                lines = source.read().splitlines()
+            for line in lines:
                 s = line.strip().lstrip("§").strip()
                 if s:
                     existing.add(re.sub(r"\s+", " ", s).lower()[:120])
     if os.path.isdir(MEM_FACTS_DIR):
         for f in glob.glob(os.path.join(MEM_FACTS_DIR, "*.md")):
             try:
-                body = open(f).read().split("---", 2)[-1]
+                with open(f, encoding="utf-8") as source:
+                    body = source.read().split("---", 2)[-1]
                 for line in body.splitlines():
                     s = line.strip()
                     if s:
@@ -140,11 +143,15 @@ def is_new(fact, existing):
 
 
 def append_fact(path, fact):
-    txt = open(path).read()
+    with open(path, encoding="utf-8") as source:
+        txt = source.read()
     if not txt.endswith("\n"):
         txt += "\n"
     txt = txt.rstrip("\n") + f"\n§\n{fact}\n"
-    open(path, "w").write(txt)
+    tmp = f"{path}.tmp"
+    with open(tmp, "w", encoding="utf-8") as output:
+        output.write(txt)
+    os.replace(tmp, path)
 
 
 def write_memory_fact_file(fact):
@@ -155,7 +162,8 @@ def write_memory_fact_file(fact):
     while os.path.exists(fn):
         fn = fn.replace(".md", f"-{n}.md")
         n += 1
-    open(fn, "w").write(f"---\ntype: memory-fact\nsource: weekly-synthesis\ndate: {datetime.date.today()}\n---\n\n{fact}\n")
+    with open(fn, "w", encoding="utf-8") as output:
+        output.write(f"---\ntype: memory-fact\nsource: weekly-synthesis\ndate: {datetime.date.today()}\n---\n\n{fact}\n")
 
 
 def queue_hindsight(fact):

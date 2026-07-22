@@ -17,6 +17,7 @@ Usage: agents_md_watchdog.py [--deep]   (--deep is reserved for the full model
 deep-scan workflow; normal cron runs only perform deterministic coverage checks)
 """
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -91,13 +92,17 @@ def main():
         sig = detect_stack(r)
         if sig in ("typescript", "python", "solidity", "rust", "mixed-ts-py"):
             if STAMPER.exists():
-                os.system(f'"{sys.executable}" "{STAMPER}" --force "{r}" >/dev/null 2>&1')
+                subprocess.run(
+                    [sys.executable, str(STAMPER), "--force", str(r)],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
                 stamped.append(r)
         # C# / Unity / unknown -> leave for a real deep-scan (agents-md-generation skill)
 
         # Also drop a .mise.toml for reproducible toolchain (Node/Python/Rust pins)
         if MISGEN.exists():
-            os.system(f'"{sys.executable}" "{MISGEN}" "{r}" --write >/dev/null 2>&1')
+            subprocess.run(
+                [sys.executable, str(MISGEN), str(r), "--write"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
 
     if not gaps:
         print("AGENTS.md coverage: 100% — no gaps found.")

@@ -13,6 +13,7 @@ This repository is the source of truth for Hermes infrastructure implementations
 - Second-brain sync and maintenance: `second-brain/scripts/`
 - Cron prompt templates: `cron/`
 - launchd templates: `launchd/`
+- Hermes gateway launchd template: `launchd/ai.hermes.gateway.plist.example`
 
 Global Hermes paths are compatibility links or runtime state only:
 

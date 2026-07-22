@@ -154,6 +154,10 @@ def chunk_text(text: str, path: str):
     Strategy: split on blank-line-separated blocks, then if a block is too
     big, hard-split by line count. Keeps function-level context together."""
     lines = text.splitlines()
+    if text.strip() and (len(lines) <= 1 or any(len(line) > MAX_CHUNK_CHARS for line in lines)):
+        step = max(1, MAX_CHUNK_CHARS - min(CHUNK_OVERLAP, MAX_CHUNK_CHARS - 1))
+        return [text[i:i + MAX_CHUNK_CHARS]
+                for i in range(0, len(text), step) if text[i:i + MAX_CHUNK_CHARS].strip()]
     chunks, cur, cur_len = [], [], 0
     for ln in lines:
         cur.append(ln)
@@ -437,21 +441,16 @@ def cmd_index(reindex=False):
         if CHROMA_DIR.exists():
             shutil.rmtree(CHROMA_DIR)
         state = {"repos": {}, "model": MODEL}
-    print("[DEBUG] before get_chroma", flush=True)
     chroma = get_chroma()
-    print("[DEBUG] after get_chroma", flush=True)
     col = chroma.get_or_create_collection(
         name="code", metadata={"model": MODEL, "dev_root": str(DEV_ROOT)},
         embedding_function=None,  # we supply embeddings directly via TEI
     )
     client = get_client()
-    print("[DEBUG] before find_git_repos", flush=True)
     repos = find_git_repos(DEV_ROOT)
-    print(f"[DEBUG] after find_git_repos: {len(repos)} repos", flush=True)
     log(f"discovered {len(repos)} git repos under {DEV_ROOT}")
     total_new, total_upd, total_skip = 0, 0, 0
     for repo_path, repo_name in repos:
-        print(f"[DEBUG] processing repo {repo_name}...", flush=True)
         # TEI model is loaded once (server-side, resident) — no
         # per-repo restart needed.
         client = get_client()
@@ -599,9 +598,7 @@ def cmd_status():
         print(f"  - {name}: {len(rs.get('files', {}))} files")
 
 def cmd_query(q, repo=None, n=8):
-    print("[DEBUG] before get_chroma", flush=True)
     chroma = get_chroma()
-    print("[DEBUG] after get_chroma", flush=True)
     col = chroma.get_collection("code")
     client = get_client()
     # get_client() returns our custom _TEIClient with .embed(model, input) ->

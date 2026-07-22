@@ -25,7 +25,7 @@ HINDSIGHT_DIR = os.path.join(HERMES_DIR, "hindsight")
 def write_vault_file(path, content):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = path + ".tmp"
-    with open(tmp, "w") as f:
+    with open(tmp, "w", encoding="utf-8") as f:
         f.write(content)
     os.replace(tmp, path)
 
@@ -47,7 +47,7 @@ def export_memory_facts():
                 content = e.get("content") if isinstance(e, dict) else str(e)
                 target = e.get("target", "general") if isinstance(e, dict) else "general"
                 fn = os.path.join(MEM_FACTS_DIR, f"{os.path.basename(f).replace('.json','')}-{i}.md")
-                with open(fn, "w") as out:
+                with open(fn, "w", encoding="utf-8") as out:
                     out.write(f"---\ntype: memory-fact\ntarget: {target}\nsource: hermes-memory-tool\ndate: {datetime.date.today()}\n---\n\n{content}\n")
                 count += 1
     return count
@@ -69,12 +69,12 @@ def export_hindsight():
             if not text.strip():
                 continue
             fn = os.path.join(HINDSIGHT_DIR, f"{oid}.md")
-            with open(fn, "w") as out:
+            with open(fn, "w", encoding="utf-8") as out:
                 out.write(f"---\ntype: hindsight-observation\nid: {oid}\ndate: {datetime.date.today()}\n---\n\n{text}\n")
             n += 1
         return n
     except Exception as e:
-        with open(os.path.join(HINDSIGHT_DIR, "_STATUS.md"), "w") as out:
+        with open(os.path.join(HINDSIGHT_DIR, "_STATUS.md"), "w", encoding="utf-8") as out:
             out.write(f"Hindsight export skipped: {type(e).__name__}: {e}\n")
         return 0
 
@@ -105,7 +105,7 @@ def write_dashboard(mf, hs):
         (f"{PERSONAL_SECTION}/Documents/", "Local Documents (PDF text)"),
     ]
     src_lines = "\n".join(f"- `{s}` — {desc}: **{cnt(s)}** files" for s, desc in sources)
-    with open(dash, "w") as out:
+    with open(dash, "w", encoding="utf-8") as out:
         out.write(f"""# 🧠 Second Brain — Dashboard
 
 _Generated {datetime.datetime.now().isoformat()}_

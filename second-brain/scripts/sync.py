@@ -50,7 +50,7 @@ def log(m):
 def write_vault_file(path, content):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = path + ".tmp"
-    with open(tmp, "w") as f:
+    with open(tmp, "w", encoding="utf-8") as f:
         f.write(content)
     os.replace(tmp, path)
 
@@ -208,8 +208,10 @@ def sync_github(col):
             # incremental: skip if already synced today
             safe = "".join(c for c in name if c.isalnum() or c in " -_.")[:60]
             existing = os.path.join(vdir, f"{safe}.md")
-            if os.path.exists(existing) and f"date: {today}" in open(existing, encoding="utf-8").read():
-                continue
+            if os.path.exists(existing):
+                with open(existing, encoding="utf-8") as source:
+                    if f"date: {today}" in source.read():
+                        continue
             readme = _gh_api(f"repos/{owner}/{name}/readme", jq=".content")
             if not readme:
                 continue
@@ -355,7 +357,8 @@ def sync_documents(col):
                 elif f.endswith((".docx", ".rtf", ".pages")):
                     body = f"[Binary: {f} — text extraction not supported]"
                 else:
-                    body = open(fp, errors="ignore").read()[:6000]
+                    with open(fp, errors="ignore", encoding="utf-8") as source:
+                        body = source.read()[:6000]
             except Exception:
                 continue
             title = os.path.splitext(f)[0]
@@ -436,7 +439,7 @@ def sync_hindsight(col):
             n += 1
         log(f"  Hindsight: {n} observations")
     except Exception as e:
-        with open(os.path.join(DIRS["hindsight"], "_STATUS.md"), "w") as out:
+        with open(os.path.join(DIRS["hindsight"], "_STATUS.md"), "w", encoding="utf-8") as out:
             out.write(f"Hindsight export skipped: {type(e).__name__}: {e}\n")
         log(f"  Hindsight skipped: {e}")
 

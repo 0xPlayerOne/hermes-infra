@@ -111,6 +111,20 @@ hermes-infra/
 - Python is reserved for data workflows and Python-library integrations. Files use `snake_case.py`.
 - Shell is limited to setup, environment loading, and the Guardian policy. Files use `kebab-case.sh`.
 
+## Testing
+
+```bash
+# Python: unit tests plus branch-aware coverage
+.venv/bin/python -m pytest --cov --cov-report=term-missing
+
+# Rust: formatting, linting, tests, and instrumented coverage
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo llvm-cov --summary-only
+```
+
+CI enforces at least 80% Python line coverage and 50% Rust line coverage. Rust's remaining uncovered lines are primarily non-returning process supervisors and launchd/Watchman integration branches, which are validated against the live macOS services.
+
 ## License
 
 AGPL-3.0-only — see [LICENSE](LICENSE) and [NOTICE](NOTICE).

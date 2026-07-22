@@ -13,10 +13,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.97.1
-          components: clippy,rustfmt
+          components: clippy,llvm-tools-preview,rustfmt
+      - uses: taiki-e/install-action@cargo-llvm-cov
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
-      - run: cargo test
+      - run: cargo llvm-cov --fail-under-lines 50
 
   scripts:
     runs-on: ubuntu-latest
@@ -25,5 +26,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: python -m compileall -q code-index second-brain/scripts scripts
+      - uses: astral-sh/setup-uv@v6
+      - run: uv venv --python 3.11 .venv
+      - run: uv pip install --python .venv/bin/python -r requirements.txt -r requirements-dev.txt
+      - run: .venv/bin/python -m compileall -q code-index second-brain/scripts scripts
       - run: bash -n scripts/*.sh
+      - run: .venv/bin/python -m pytest --cov --cov-fail-under=80

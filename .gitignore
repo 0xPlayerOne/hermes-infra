@@ -23,6 +23,8 @@ venv/
 target/
 __pycache__/
 *.pyc
+.coverage
+htmlcov/
 
 # === LAUNCHD (user-specific paths) ===
 launchd/*.plist

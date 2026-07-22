@@ -21,8 +21,6 @@ Exit 0 = wrote/confirmed, 1 = bad args.
 """
 import os
 import sys
-import json
-import subprocess
 from pathlib import Path
 
 # ---- detection ----------------------------------------------------------
@@ -64,7 +62,7 @@ def detect(path: Path) -> dict:
                 sig["npm_lock"] = True
             elif p == "uv.lock":
                 sig["uv"] = True
-            elif p == "csproj" or p == "unitypackage":
+            elif p.endswith(".csproj") or p.endswith(".unitypackage"):
                 sig["cs"] += 1
     return sig
 

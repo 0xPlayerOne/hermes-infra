@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HERMES_HOME</key>
+        <string>/path/to/.hermes</string>
+        <key>PATH</key>
+        <string>/path/to/.hermes/hermes-agent/venv/bin:/path/to/.hermes/hermes-agent/node_modules/.bin:/path/to/.hermes/node/bin:/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin:/opt/homebrew/sbin</string>
+        <key>VIRTUAL_ENV</key>
+        <string>/path/to/.hermes/hermes-agent/venv</string>
+    </dict>
+    <key>ExitTimeOut</key>
+    <integer>25</integer>
+    <key>KeepAlive</key>
+    <true/>
+    <key>Label</key>
+    <string>ai.hermes.gateway</string>
+    <key>LimitLoadToSessionType</key>
+    <array>
+        <string>Aqua</string>
+        <string>Background</string>
+    </array>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/path/to/.hermes/hermes-agent/venv/bin/python</string>
+        <string>-m</string>
+        <string>hermes_cli.main</string>
+        <string>gateway</string>
+        <string>run</string>
+        <string>--replace</string>
+        <string>--profile</string>
+        <string>default</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardErrorPath</key>
+    <string>/path/to/.hermes/logs/gateway.error.log</string>
+    <key>StandardOutPath</key>
+    <string>/path/to/.hermes/logs/gateway.log</string>
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+    <key>WorkingDirectory</key>
+    <string>/path/to/.hermes</string>
+</dict>
+</plist>
