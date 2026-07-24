@@ -1,16 +1,16 @@
 #!/usr/bin/env -S /Users/amf/.hermes/hermes-agent/venv/bin/python3
 """
-send-directive.py — Post a directive as Ye to one or all maintenance threads.
+send-thread-directive.py — Post a directive as Ye to one or all maintenance threads.
 
 USAGE:
   # All 9 threads (default)
-  python3 ~/.hermes/profiles/intern/scripts/send-directive.py "Your message here"
+  python3 ~/.hermes/profiles/intern/scripts/send-thread-directive.py "Your message here"
 
   # Single repo thread
-  python3 ~/.hermes/profiles/intern/scripts/send-directive.py "Message" --repo pink-binder
+  python3 ~/.hermes/profiles/intern/scripts/send-thread-directive.py "Message" --repo pink-binder
 
   # Multiple specific repos
-  python3 ~/.hermes/profiles/intern/scripts/send-directive.py "Message" --repo pink-binder --repo hermes-infra
+  python3 ~/.hermes/profiles/intern/scripts/send-thread-directive.py "Message" --repo pink-binder --repo hermes-infra
 
 The message is prefixed with <@1528604968301494282> (Intern @mention) so
 Intern's DISCORD_ALLOW_BOTS=mentions gate admits it.
