@@ -502,3 +502,367 @@ class FakeEmbedClient:
         if isinstance(input, str):
             return {"embeddings": [[0.1, 0.2, 0.3]]}
         return {"embeddings": [[0.1, 0.2, 0.3] for _ in input]}
+
+
+# -- cmd_index tests ------------------------------------------------------
+
+
+def test_cmd_index_incremental(load_script, monkeypatch, tmp_path):
+    """cmd_index runs incremental index with mocked ChromaDB and TEI."""
+    module = _load_module(load_script, monkeypatch, tmp_path)
+
+    # Mock ChromaDB collection
+    mock_collection = FakeChromaCollection()
+
+    monkeypatch.setattr(module, "get_collection", lambda: mock_collection)
+    monkeypatch.setattr(module, "get_client", lambda: FakeEmbedClient(success=True))
+    monkeypatch.setattr(module, "load_state", lambda: {"files": {}, "model": module.MODEL})
+    monkeypatch.setattr(module, "save_state", lambda state: None)
+    monkeypatch.setattr(module, "discover_files", lambda root: [])
+    monkeypatch.setattr(module, "log", lambda msg: None)
+
+    result = module.cmd_index(reindex=False)
+    assert result == 0
+
+
+def test_cmd_index_reindex(load_script, monkeypatch, tmp_path):
+    """cmd_index with reindex=True wipes the collection first."""
+    module = _load_module(load_script, monkeypatch, tmp_path)
+
+    mock_collection = FakeChromaCollection()
+    mock_collection.delete_count = 0
+    original_delete = mock_collection.delete
+
+    def tracking_delete(**kwargs):
+        mock_collection.delete_count += 1
+        return original_delete(**kwargs)
+
+    mock_collection.delete = tracking_delete
+
+    monkeypatch.setattr(module, "get_collection", lambda: mock_collection)
+    monkeypatch.setattr(module, "get_client", lambda: FakeEmbedClient(success=True))
+    monkeypatch.setattr(module, "load_state", lambda: {"files": {}, "model": module.MODEL})
+    monkeypatch.setattr(module, "save_state", lambda state: None)
+    monkeypatch.setattr(module, "discover_files", lambda root: [])
+    monkeypatch.setattr(module, "log", lambda msg: None)
+
+    result = module.cmd_index(reindex=True)
+    assert result == 0
+    assert mock_collection.delete_count > 0
+
+
+def test_cmd_index_tei_unreachable(load_script, monkeypatch, tmp_path):
+    """cmd_index returns 1 when TEI is not reachable."""
+    module = _load_module(load_script, monkeypatch, tmp_path)
+
+    mock_collection = FakeChromaCollection()
+    monkeypatch.setattr(module, "get_collection", lambda: mock_collection)
+    monkeypatch.setattr(module, "get_client", lambda: FakeEmbedClient(success=False))
+    monkeypatch.setattr(module, "load_state", lambda: {"files": {}, "model": module.MODEL})
+    monkeypatch.setattr(module, "save_state", lambda state: None)
+    monkeypatch.setattr(module, "discover_files", lambda root: [])
+    monkeypatch.setattr(module, "log", lambda msg: None)
+
+    result = module.cmd_index(reindex=False)
+    assert result == 1
+
+
+def test_cmd_index_with_files(load_script, monkeypatch, tmp_path):
+    """cmd_index processes markdown files and upserts chunks."""
+    module = _load_module(load_script, monkeypatch, tmp_path)
+
+    brain_root = tmp_path / "brain"
+    brain_root.mkdir(parents=True)
+    doc = brain_root / "doc.md"
+    doc.write_text("# Hello\n\nWorld content here.", encoding="utf-8")
+
+    mock_collection = FakeChromaCollection()
+    mock_collection.upsert_count = 0
+    original_upsert = mock_collection.upsert
+
+    def tracking_upsert(**kwargs):
+        mock_collection.upsert_count += 1
+        return original_upsert(**kwargs)
+
+    mock_collection.upsert = tracking_upsert
+
+    monkeypatch.setattr(module, "get_collection", lambda: mock_collection)
+    monkeypatch.setattr(module, "get_client", lambda: FakeEmbedClient(success=True))
+    monkeypatch.setattr(module, "load_state", lambda: {"files": {}, "model": module.MODEL})
+    monkeypatch.setattr(module, "save_state", lambda state: None)
+    monkeypatch.setattr(module, "discover_files", lambda root: [doc])
+    monkeypatch.setattr(module, "file_hash", lambda p: "abc123")
+    monkeypatch.setattr(module, "log", lambda msg: None)
+
+    result = module.cmd_index(reindex=False)
+    assert result == 0
+
+
+def test_cmd_status(load_script, monkeypatch, tmp_path):
+    """cmd_status prints collection stats."""
+    module = _load_module(load_script, monkeypatch, tmp_path)
+
+    mock_collection = FakeChromaCollection()
+    mock_collection._count = 5
+    monkeypatch.setattr(module, "get_collection", lambda: mock_collection)
+    monkeypatch.setattr(
+        module, "load_state", lambda: {"files": {"doc.md": "hash1"}, "model": module.MODEL}
+    )
+    monkeypatch.setattr(module, "log", lambda msg: None)
+
+    import io
+    from contextlib import redirect_stdout
+
+    f = io.StringIO()
+    with redirect_stdout(f):
+        module.cmd_status()
+    output = f.getvalue()
+    assert "second-brain" in output
+    assert "Files indexed: 1" in output
+    assert "Total chunks: 5" in output
+
+
+def test_cmd_status_empty_collection(load_script, monkeypatch, tmp_path):
+    """cmd_status handles empty collection gracefully."""
+    module = _load_module(load_script, monkeypatch, tmp_path)
+
+    mock_collection = FakeChromaCollection()
+    mock_collection._count = 0
+    monkeypatch.setattr(module, "get_collection", lambda: mock_collection)
+    monkeypatch.setattr(module, "load_state", lambda: {"files": {}, "model": module.MODEL})
+    monkeypatch.setattr(module, "log", lambda msg: None)
+
+    import io
+    from contextlib import redirect_stdout
+
+    f = io.StringIO()
+    with redirect_stdout(f):
+        module.cmd_status()
+    output = f.getvalue()
+    assert "second-brain" in output
+    assert "Files indexed: 0" in output
+
+
+def test_cmd_query(load_script, monkeypatch, tmp_path):
+    """cmd_query performs semantic search and prints results."""
+    module = _load_module(load_script, monkeypatch, tmp_path)
+
+    mock_collection = FakeChromaCollection()
+    mock_collection._count = 3
+    mock_collection._query_result = {
+        "documents": [["Hello world", "Goodbye world"]],
+        "metadatas": [
+            [
+                {
+                    "source_file": "doc.md",
+                    "section": "Intro",
+                    "folder": ".",
+                    "chunk_index": 0,
+                    "total_chunks": 2,
+                },
+                {
+                    "source_file": "doc.md",
+                    "section": "Outro",
+                    "folder": ".",
+                    "chunk_index": 1,
+                    "total_chunks": 2,
+                },
+            ],
+        ],
+        "distances": [[0.1, 0.3]],
+    }
+
+    monkeypatch.setattr(module, "get_collection", lambda: mock_collection)
+    monkeypatch.setattr(module, "get_client", lambda: FakeEmbedClient(success=True))
+    monkeypatch.setattr(module, "load_state", lambda: {"files": {}, "model": module.MODEL})
+    monkeypatch.setattr(module, "log", lambda msg: None)
+
+    import io
+    from contextlib import redirect_stdout
+
+    f = io.StringIO()
+    with redirect_stdout(f):
+        result = module.cmd_query("hello", n=2)
+    output = f.getvalue()
+    assert result == 0
+    assert "query:" in output
+    assert "score=" in output
+
+
+def test_cmd_query_empty_collection(load_script, monkeypatch, tmp_path):
+    """cmd_query returns 1 when collection is empty."""
+    module = _load_module(load_script, monkeypatch, tmp_path)
+
+    mock_collection = FakeChromaCollection()
+    mock_collection._count = 0
+    monkeypatch.setattr(module, "get_collection", lambda: mock_collection)
+    monkeypatch.setattr(module, "log", lambda msg: None)
+
+    result = module.cmd_query("hello", n=2)
+    assert result == 1
+
+
+def test_cmd_query_embed_fail(load_script, monkeypatch, tmp_path):
+    """cmd_query returns 1 when embedding fails."""
+    module = _load_module(load_script, monkeypatch, tmp_path)
+
+    mock_collection = FakeChromaCollection()
+    mock_collection._count = 3
+    monkeypatch.setattr(module, "get_collection", lambda: mock_collection)
+    monkeypatch.setattr(module, "get_client", lambda: FakeEmbedClient(success=False))
+    monkeypatch.setattr(module, "log", lambda msg: None)
+
+    result = module.cmd_query("hello", n=2)
+    assert result == 1
+
+
+# -- get_collection tests --------------------------------------------------
+
+
+def test_get_collection_returns_collection(load_script, monkeypatch, tmp_path):
+    """get_collection returns a ChromaDB collection with correct metadata."""
+    module = _load_module(load_script, monkeypatch, tmp_path)
+
+    mock_collection = FakeChromaCollection()
+    mock_client_instance = FakeChromaClient(mock_collection)
+
+    import chromadb
+
+    monkeypatch.setattr(chromadb, "PersistentClient", lambda **kwargs: mock_client_instance)
+
+    col = module.get_collection()
+    assert col is mock_collection
+
+
+# -- chunk_markdown edge cases ---------------------------------------------
+
+
+def test_chunk_markdown_single_header(load_script, monkeypatch, tmp_path):
+    """chunk_markdown handles text with only a header and no body."""
+    module = _load_module(load_script, monkeypatch, tmp_path)
+    text = "## Just a Header"
+    result = module.chunk_markdown(text, "header-only.md")
+    assert result == []
+
+
+def test_chunk_markdown_multiple_headers_same_content(load_script, monkeypatch, tmp_path):
+    """chunk_markdown correctly assigns sections to multiple headers."""
+    module = _load_module(load_script, monkeypatch, tmp_path)
+    text = "## Alpha\n\nAlpha body.\n\n## Beta\n\nBeta body."
+    result = module.chunk_markdown(text, "multi.md")
+    sections = [c["section"] for c in result]
+    assert "Alpha" in sections
+    assert "Beta" in sections
+
+
+def test_chunk_markdown_deep_headers(load_script, monkeypatch, tmp_path):
+    """chunk_markdown handles ### (level 3) headers."""
+    module = _load_module(load_script, monkeypatch, tmp_path)
+    text = "## Section\n\nContent.\n\n### Deep Subsection\n\nDeep content."
+    result = module.chunk_markdown(text, "deep.md")
+    sections = [c["section"] for c in result]
+    assert "Section" in sections
+    assert "Deep Subsection" in sections
+
+
+def test_chunk_markdown_frontmatter_only(load_script, monkeypatch, tmp_path):
+    """chunk_markdown returns empty list when frontmatter has no body content."""
+    module = _load_module(load_script, monkeypatch, tmp_path)
+    text = "---\ntitle: Only Frontmatter\n---"
+    result = module.chunk_markdown(text, "fm-only.md")
+    assert result == []
+
+
+# -- discover_files edge cases ---------------------------------------------
+
+
+def test_discover_files_empty_dir(load_script, monkeypatch, tmp_path):
+    """discover_files returns empty list for directory with no .md files."""
+    module = _load_module(load_script, monkeypatch, tmp_path)
+    brain_root = tmp_path / "brain"
+    brain_root.mkdir(parents=True)
+    (brain_root / "readme.txt").write_text("not markdown", encoding="utf-8")
+    files = module.discover_files(brain_root)
+    assert files == []
+
+
+def test_discover_files_zero_size_skipped(load_script, monkeypatch, tmp_path):
+    """discover_files skips zero-byte files."""
+    module = _load_module(load_script, monkeypatch, tmp_path)
+    brain_root = tmp_path / "brain"
+    brain_root.mkdir(parents=True)
+    empty = brain_root / "empty.md"
+    empty.write_text("", encoding="utf-8")
+    (brain_root / "real.md").write_text("content", encoding="utf-8")
+    files = module.discover_files(brain_root)
+    assert len(files) == 1
+    assert files[0].name == "real.md"
+
+
+# -- helper classes for mocking ChromaDB -----------------------------------
+
+
+class FakeChromaCollection:
+    """Fake ChromaDB collection for testing."""
+
+    def __init__(self):
+        self._count = 0
+        self._stored = {"ids": [], "documents": [], "metadatas": [], "embeddings": []}
+        self.delete_count = 0
+        self._query_result = None
+
+    def count(self):
+        return self._count
+
+    def delete(self, **kwargs):
+        self.delete_count += 1
+
+    def upsert(self, **kwargs):
+        ids = kwargs.get("ids", [])
+        docs = kwargs.get("documents", [])
+        metas = kwargs.get("metadatas", [])
+        embs = kwargs.get("embeddings", [])
+        self._stored["ids"].extend(ids)
+        self._stored["documents"].extend(docs)
+        self._stored["metadatas"].extend(metas)
+        self._stored["embeddings"].extend(embs)
+        self._count = len(self._stored["ids"])
+
+    def get(self, **kwargs):
+        where = kwargs.get("where", {})
+        ids = self._stored["ids"]
+        docs = self._stored["documents"]
+        metas = self._stored["metadatas"]
+        if where:
+            source_file = where.get("source_file")
+            if source_file:
+                filtered = [
+                    (i, d, m)
+                    for i, d, m in zip(ids, docs, metas, strict=True)
+                    if m.get("source_file") == source_file
+                ]
+                if filtered:
+                    ids, docs, metas = [list(x) for x in zip(*filtered, strict=True)]
+                else:
+                    return {"ids": [], "documents": [], "metadatas": []}
+        return {"ids": ids, "documents": docs, "metadatas": metas}
+
+    def query(self, **kwargs):
+        if self._query_result is not None:
+            return self._query_result
+        n_results = kwargs.get("n_results", 1)
+        return {
+            "documents": [[d] for d in self._stored["documents"][:n_results]],
+            "metadatas": [[m] for m in self._stored["metadatas"][:n_results]],
+            "distances": [[0.1] for _ in range(min(n_results, len(self._stored["ids"])))],
+        }
+
+
+class FakeChromaClient:
+    """Fake ChromaDB persistent client."""
+
+    def __init__(self, collection):
+        self._collection = collection
+
+    def get_or_create_collection(self, name, **kwargs):
+        return self._collection
