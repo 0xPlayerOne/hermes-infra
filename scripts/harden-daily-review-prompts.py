@@ -19,7 +19,6 @@ REPO_INFO = {
     "nifty-contracts-api":   ("NiftyLeague/nifty-contracts-api", "bun run test"),
     "nifty-fe-monorepo":     ("NiftyLeague/nifty-fe-monorepo", "bun test --isolate"),
     "nifty-league-subgraph": ("NiftyLeague/nifty-league-subgraph", "bun test bun-tests"),
-    "nifty-league-subgraph-dev": ("NiftyLeague/nifty-league-subgraph-dev", "bun test bun-tests"),
     "nifty-smart-contracts": ("NiftyLeague/nifty-smart-contracts", "bun run test && bun run test:hardhat"),
     "PlayFabConfigs":        ("NiftyLeague/PlayFabConfigs", "bun test"),
     "hermes-infra":          ("0xPlayerOne/hermes-infra", "cargo test && .venv/bin/python -m pytest -q --cov"),
