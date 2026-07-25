@@ -23,8 +23,12 @@ jobs:
       - uses: jdx/mise-action@v4
         with:
           cache: true
-      - name: Ensure rustfmt is installed
-        run: rustup component add rustfmt --toolchain "$(rustc --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')" 2>&1 || rustup component add rustfmt 2>&1 || true
+      - name: Ensure Rust components are installed
+        run: |
+          TOOLCHAIN="$(rustc --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
+          rustup component add rustfmt --toolchain "${TOOLCHAIN}" 2>&1 || true
+          rustup component add clippy --toolchain "${TOOLCHAIN}" 2>&1 || true
+          rustup component add llvm-tools-preview --toolchain "${TOOLCHAIN}" 2>&1 || true
       - name: Format check
         run: cargo fmt --check
       - name: Lint
