@@ -5,72 +5,68 @@ on:
     branches: [main, staging]
   pull_request:
     branches: [staging]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Build, Format, Lint & Type Check
+  format:
+    name: Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup
+        uses: ./.github/actions/setup
         with:
-          cache: true
-      - name: Ensure Rust components are installed
-        run: |
-          TOOLCHAIN="$(rustc --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
-          rustup component add rustfmt --toolchain "${TOOLCHAIN}" 2>&1 || true
-          rustup component add clippy --toolchain "${TOOLCHAIN}" 2>&1 || true
-          rustup component add llvm-tools-preview --toolchain "${TOOLCHAIN}" 2>&1 || true
-      - name: Format check
-        run: cargo fmt --check
+          install: true
+      - name: Format
+        run: bash .github/scripts/ci.sh format
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          install: true
       - name: Lint
-        run: cargo clippy --all-targets -- -D warnings
-      - name: Type check
-        run: cargo check
+        run: bash .github/scripts/ci.sh lint
+
+  type-check:
+    name: Type-Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          install: true
+      - name: Type-Check
+        run: bash .github/scripts/ci.sh type_check
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          install: true
       - name: Build
-        run: cargo build
-
-  test-rust:
-    name: Test (Rust)
-    runs-on: ubuntu-latest
-    needs: quality
-    steps:
-      - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
-        with:
-          cache: true
-      - name: Test
-        run: cargo test
-
-  test-python:
-    name: Test (Python)
-    runs-on: ubuntu-latest
-    needs: quality
-    steps:
-      - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
-        with:
-          cache: true
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-      - name: Set up Python
-        run: uv venv --python 3.11 .venv
-      - name: Install dependencies
-        run: |
-          uv pip install --python .venv/bin/python --requirement requirements.txt
-          uv pip install --python .venv/bin/python --requirement requirements-dev.txt
-      - name: Syntax check
-        run: .venv/bin/python -m compileall -q code-index second-brain/scripts scripts tests
-      - name: Shell syntax check
-        run: bash -n scripts/*.sh
-      - name: Run tests
-        run: .venv/bin/python -m pytest -q -x --ignore=tests/test_live_infra.py
+        run: bash .github/scripts/ci.sh build
