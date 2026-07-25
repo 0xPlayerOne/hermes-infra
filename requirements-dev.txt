@@ -1,4 +1,4 @@
-coverage==7.10.7
+coverage==7.15.2
 pre-commit==4.3.0
 pylint==4.0.6
 pytest==9.0.3
