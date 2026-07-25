@@ -1,4 +1,4 @@
-# Contributing to Hermes Infra Frontend Monorepo
+# Contributing to Hermes Infra
 
 Welcome! This document is the **single source of truth** for the contribution workflow across all Hermes Infra repositories.  
 All agents (Hermes and other automation) must read and follow this document before working on any repo in the fleet.
@@ -26,29 +26,30 @@ All agents (Hermes and other automation) must read and follow this document befo
 
 ## 1. Repository Overview
 
-This is a **Turborepo** monorepo managed with **Bun** (v1.3.14) and **Node.js** (v24.18.0) via `mise`.
+This is a **Rust CLI + Python data processing** repository. There is no JavaScript, no Turborepo, no Next.js.
 
-### Apps
+### Components
 
-| App        | Stack                      | Port |
-| ---------- | -------------------------- | ---- |
-| `app`      | Next.js (Web3 dashboard)   | —    |
-| `docs`     | Docusaurus                 | —    |
-| `web`      | Next.js (company website)  | —    |
-| `smashers` | Next.js (game site)        | —    |
-| `template` | Next.js (new-app scaffold) | —    |
+| Component       | Stack                        |
+| --------------- | ---------------------------- |
+| `src/`          | Rust CLI (Cargo workspace)   |
+| `code-index/`   | Python (ChromaDB indexing)   |
+| `second-brain/` | Python (Obsidian sync)       |
+| `scripts/`      | Python + Shell (tooling)     |
+| `tests/`        | Python (pytest test suite)   |
 
 ### Commands
 
-| Command            | What it does                            |
-| ------------------ | --------------------------------------- |
-| `turbo build`      | Build all apps & packages               |
-| `turbo dev`        | Run everything in dev mode              |
-| `turbo test`       | Run tests (bun native, not vitest/jest) |
-| `turbo format`     | Check formatting                        |
-| `turbo format:fix` | Auto-format                             |
-| `turbo lint`       | ESLint + Prettier                       |
-| `turbo type-check` | TypeScript checks                       |
+| Command                    | What it does                            |
+| -------------------------- | --------------------------------------- |
+| `cargo build`              | Build the Rust CLI                      |
+| `cargo fmt --check`        | Check Rust formatting                   |
+| `cargo clippy --all-targets -- -D warnings` | Lint all Rust code            |
+| `cargo test`               | Run Rust tests                          |
+| `cargo llvm-cov`           | Rust test coverage                      |
+| `.venv/bin/python -m pytest -q` | Run Python tests                   |
+| `.venv/bin/python -m compileall -q .` | Check Python compilation         |
+| `bash -n scripts/*.sh`     | Syntax-check shell scripts              |
 
 ---
 
@@ -67,7 +68,6 @@ feat/foo  fix/bar  chore/baz  ...          (feature branches)
 - **No direct pushes.** Not by you, not by any agent, not by admin (0xPlayerOne). All pushes blocked by branch protection (`enforce_admins: true`).
 - **Only accepts merges from `staging`.** No other branch may merge into `main`.
 - **All CI must pass on `staging`** before a staging→main PR can merge.
-- **Vercel preview deployments** (if applicable) must also pass before merge.
 - **Linear history.** No merge commits — squash merge only. Every commit on `main` is a squashed summary of a staging batch.
 - **Force pushes are disabled** on `main`.
 
@@ -99,7 +99,8 @@ feat/foo  fix/bar  chore/baz  ...          (feature branches)
 
 ### Prerequisites
 
-- `mise` (toolchain version manager) — installs bun and node at pinned versions
+- `rustup` (Rust toolchain) — install via rustup.rs
+- `uv` (Python package manager) — install via docs.astral.sh/uv
 - `git` (obviously)
 
 ### One-time setup
@@ -109,27 +110,25 @@ feat/foo  fix/bar  chore/baz  ...          (feature branches)
 git clone git@github.com:0xPlayerOne/hermes-infra.git
 cd hermes-infra
 
-# Install toolchain (reads mise.toml → installs bun 1.3.14 + node 24.18.0)
-mise install
+# Set up Python virtualenvs
+./scripts/setup-python.sh
 
-# Install dependencies
-cargo fetch
-
-# Run everything in dev mode
-turbo dev
+# Rust toolchain is auto-installed via rust-toolchain.toml on first cargo invocation
+cargo build --release
 ```
 
 ### Before committing
 
 ```bash
-turbo lint           # ESLint + Prettier
-turbo type-check     # TypeScript type checking
-turbo test           # Run all tests
-turbo format:fix     # Auto-format (runs via husky pre-commit too)
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test
+.venv/bin/python -m compileall -q code-index second-brain/scripts scripts tests
+bash -n scripts/*.sh
+.venv/bin/python -m pytest -q
 ```
 
-> **Note:** Husky + lint-staged are active. Pre-commit hooks run `turbo format:fix` on staged files.  
-> Never use `--no-verify` to skip hooks — if a hook fails, fix the issue.
+**Note:** Python virtualenvs are managed by `scripts/setup-python.sh`. Two separate venvs are created: `.venv` (data workflows) and `.hindsight-venv` (Hindsight memory agent). Activate the appropriate one before running Python commands.
 
 ---
 
@@ -178,7 +177,6 @@ git push origin feat/my-feature
 
 - **Only admins can merge into `main`.** The daily review agent may pick up PRs once they are approved by an admin on GitHub.
 - All CI must be green on staging before this PR opens.
-- All Vercel preview deployments (if any) must pass.
 - Squash merge with a release summary message.
 - The `main` branch is then deployed to production by CI.
 - **After merge, rebase `staging` on `main`** to keep branch histories aligned and prevent future merge conflicts.
@@ -260,11 +258,13 @@ Since a commit can never be simultaneously pushed to `main`/`staging` AND be a P
 
 ### CI jobs
 
-| Job                                | What it checks                              |
-| ---------------------------------- | ------------------------------------------- |
-| `Build, Format, Lint & Type Check` | Compilation, formatting, ESLint, TypeScript |
-| `Test`                             | `turbo test` — all unit + integration tests |
-| `Vercel Preview Comments`          | Preview deployment verification             |
+| Job                     | What it checks                               |
+| ----------------------- | -------------------------------------------- |
+| `Rust Build & Lint`     | `cargo build`, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` |
+| `Rust Test & Coverage`  | `cargo test`, `cargo llvm-cov --fail-under-lines 50` |
+| `Python Tests`          | `.venv/bin/python -m pytest -q --cov --cov-fail-under=80` |
+| `Python Compilation`    | `.venv/bin/python -m compileall -q code-index second-brain/scripts scripts tests` |
+| `Shell Syntax Check`    | `bash -n scripts/*.sh`                       |
 
 ### If CI fails
 
