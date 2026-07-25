@@ -1,47 +1,25 @@
 version: 2
 updates:
-  - package-ecosystem: pip
+  - package-ecosystem: npm
     directory: /
+    target-branch: staging
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 10
-    target-branch: staging
-    labels:
-      - dependencies
-      - python
     groups:
-      python-dependencies:
+      production-dependencies:
         dependency-type: production
         update-types:
           - patch
           - minor
-
-  - package-ecosystem: cargo
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 10
-    target-branch: staging
-    labels:
-      - dependencies
-      - rust
-    groups:
-      rust-dependencies:
-        patterns:
-          - '*'
-        update-types:
-          - patch
-          - minor
+      development-dependencies:
+        dependency-type: development
 
   - package-ecosystem: github-actions
     directory: /
+    target-branch: staging
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
-    target-branch: staging
-    labels:
-      - dependencies
-      - ci
