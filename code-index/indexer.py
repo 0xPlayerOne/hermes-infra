@@ -493,8 +493,6 @@ def _embed_with_timeout(client, batch, timeout=90):
     thread + join(timeout) is our safety net: if TEI ever hangs, we
     raise _EmbedWedge and skip the batch.
     """
-    import threading
-
     res = {}
 
     def _run():
@@ -579,10 +577,8 @@ def cmd_index(reindex=False):
         repo_ids, repo_docs, repo_embeddings, repo_metas, repo_pending = [], [], [], [], {}
         # collect files — os.walk(followlinks=False) so broken symlinks can't wedge it
         candidates = []
-        import os as _os
-
         _too_big = False
-        for dirpath, dirnames, filenames in _os.walk(str(repo_path), followlinks=False):
+        for dirpath, dirnames, filenames in os.walk(str(repo_path), followlinks=False):
             dirnames[:] = [
                 d for d in dirnames if d not in SKIP_DIRS and not d.startswith(OPAQUE_DIR_PREFIXES)
             ]

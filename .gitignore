@@ -25,6 +25,8 @@ __pycache__/
 .pytest_cache/
 *.pyc
 .coverage
+coverage.json
+coverage/
 htmlcov/
 
 # === LAUNCHD (user-specific paths) ===
