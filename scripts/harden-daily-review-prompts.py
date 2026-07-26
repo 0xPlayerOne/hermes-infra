@@ -7,22 +7,28 @@ import json
 
 JOBS_FILE = "/Users/amf/.hermes/profiles/intern/cron/jobs.json"
 
-with open(JOBS_FILE) as f:
+with open(JOBS_FILE, encoding="utf-8") as f:
     data = json.load(f)
 
 jobs = data["jobs"] if isinstance(data, dict) and "jobs" in data else data
 
 # Per-repo info: remote, test command hints
 REPO_INFO = {
-    "pink-binder":           ("0xPlayerOne/pink-binder", "bun test --coverage --isolate"),
-    "v0-portfolio":          ("0xPlayerOne/v0-portfolio", "bun test --dom --isolate"),
-    "nifty-contracts-api":   ("NiftyLeague/nifty-contracts-api", "bun run test"),
-    "nifty-fe-monorepo":     ("NiftyLeague/nifty-fe-monorepo", "bun test --isolate"),
+    "pink-binder": ("0xPlayerOne/pink-binder", "bun test --coverage --isolate"),
+    "v0-portfolio": ("0xPlayerOne/v0-portfolio", "bun test --dom --isolate"),
+    "nifty-contracts-api": ("NiftyLeague/nifty-contracts-api", "bun run test"),
+    "nifty-fe-monorepo": ("NiftyLeague/nifty-fe-monorepo", "bun test --isolate"),
     "nifty-league-subgraph": ("NiftyLeague/nifty-league-subgraph", "bun test bun-tests"),
-    "nifty-smart-contracts": ("NiftyLeague/nifty-smart-contracts", "bun run test && bun run test:hardhat"),
-    "PlayFabConfigs":        ("NiftyLeague/PlayFabConfigs", "bun test"),
-    "hermes-infra":          ("0xPlayerOne/hermes-infra", "cargo test && .venv/bin/python -m pytest -q --cov"),
-    "model-gateway":         ("0xPlayerOne/model-gateway", "cargo test --all-features"),
+    "nifty-smart-contracts": (
+        "NiftyLeague/nifty-smart-contracts",
+        "bun run test && bun run test:hardhat",
+    ),
+    "PlayFabConfigs": ("NiftyLeague/PlayFabConfigs", "bun test"),
+    "hermes-infra": (
+        "0xPlayerOne/hermes-infra",
+        "cargo test && .venv/bin/python -m pytest -q --cov",
+    ),
+    "model-gateway": ("0xPlayerOne/model-gateway", "cargo test --all-features"),
 }
 
 HARDENED_PROMPT = """You are a daily code reviewer for {remote}. Your mission: execute ALL 4 phases below in order. Do NOT stop until Phase 4 is complete.
@@ -118,13 +124,13 @@ for job in jobs:
         name = job["name"]
         repo_name = name.split(" - ", 1)[1] if " - " in name else name
         remote, test_cmd = REPO_INFO.get(repo_name, ("unknown/repo", "bun test"))
-        
+
         prompt = HARDENED_PROMPT.format(remote=remote, test_cmd=test_cmd)
         job["prompt"] = prompt
         UPDATED += 1
         print(f"  ✓ {name}")
 
-with open(JOBS_FILE, "w") as f:
+with open(JOBS_FILE, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2)
 
 print(f"\n✅ {UPDATED} Daily Review jobs updated")

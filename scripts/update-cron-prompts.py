@@ -3,11 +3,11 @@
 Update all cron prompts with rebasing instructions + YOLO mode.
 """
 
-import json, sys, re
+import json
 
 JOBS_FILE = "/Users/amf/.hermes/profiles/intern/cron/jobs.json"
 
-with open(JOBS_FILE) as f:
+with open(JOBS_FILE, encoding="utf-8") as f:
     data = json.load(f)
 
 jobs = data["jobs"] if isinstance(data, dict) and "jobs" in data else data
@@ -104,7 +104,7 @@ for job in jobs:
 
 print(f"\nUpdated {count} jobs")
 
-with open(JOBS_FILE, "w") as f:
+with open(JOBS_FILE, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2)
 
 print("Written to jobs.json")
