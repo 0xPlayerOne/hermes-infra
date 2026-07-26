@@ -359,47 +359,48 @@ def write_dependabot(name, content):
     print(f"  ✓ {name}: dependabot written ({len(content)} chars)")
 
 
-# ============================================================
-# CI UPDATES
-# ============================================================
-print("=== CI Workflows ===")
+if __name__ == "__main__":
+    # ============================================================
+    # CI UPDATES
+    # ============================================================
+    print("=== CI Workflows ===")
 
-for name in BUN_REPOS:
-    write_ci(name, BUN_CI_TEMPLATE)
+    for name in BUN_REPOS:
+        write_ci(name, BUN_CI_TEMPLATE)
 
-# nifty-smart-contracts has special Hardhat/Solidity needs
-write_ci("nifty-smart-contracts", SMART_CONTRACTS_CI)
+    # nifty-smart-contracts has special Hardhat/Solidity needs
+    write_ci("nifty-smart-contracts", SMART_CONTRACTS_CI)
 
-# hermes-infra and model-gateway have different stacks - don't standardize CI
-# but DO update action versions
-print("  ✓ hermes-infra: CI unchanged (Rust/Python stack)")
-print("  ✓ model-gateway: CI unchanged (Rust stack)")
+    # hermes-infra and model-gateway have different stacks - don't standardize CI
+    # but DO update action versions
+    print("  ✓ hermes-infra: CI unchanged (Rust/Python stack)")
+    print("  ✓ model-gateway: CI unchanged (Rust stack)")
 
-# ============================================================
-# DEPENDABOT UPDATES
-# ============================================================
-print("\n=== Dependabot ===")
+    # ============================================================
+    # DEPENDABOT UPDATES
+    # ============================================================
+    print("\n=== Dependabot ===")
 
-# npm repos (bun-managed but npm ecosystem works for dependabot)
-for name in [
-    "pink-binder",
-    "v0-portfolio",
-    "nifty-contracts-api",
-    "nifty-fe-monorepo",
-    "nifty-league-subgraph",
-]:
-    write_dependabot(name, NPM_DEPENDABOT)
+    # npm repos (bun-managed but npm ecosystem works for dependabot)
+    for name in [
+        "pink-binder",
+        "v0-portfolio",
+        "nifty-contracts-api",
+        "nifty-fe-monorepo",
+        "nifty-league-subgraph",
+    ]:
+        write_dependabot(name, NPM_DEPENDABOT)
 
-# nifty-smart-contracts npm with labels
-write_dependabot("nifty-smart-contracts", NPM_SC_DEPENDABOT)
+    # nifty-smart-contracts npm with labels
+    write_dependabot("nifty-smart-contracts", NPM_SC_DEPENDABOT)
 
-# PlayFabConfigs uses bun ecosystem
-write_dependabot("PlayFabConfigs", BUN_DEPENDABOT)
+    # PlayFabConfigs uses bun ecosystem
+    write_dependabot("PlayFabConfigs", BUN_DEPENDABOT)
 
-# hermes-infra (pip + cargo)
-write_dependabot("hermes-infra", HERMES_INFRA_DEPENDABOT)
+    # hermes-infra (pip + cargo)
+    write_dependabot("hermes-infra", HERMES_INFRA_DEPENDABOT)
 
-# model-gateway - ADD dependabot (was missing)
-write_dependabot("model-gateway", MODEL_GATEWAY_DEPENDABOT)
+    # model-gateway - ADD dependabot (was missing)
+    write_dependabot("model-gateway", MODEL_GATEWAY_DEPENDABOT)
 
-print("\n✅ All CI + dependabot configs written")
+    print("\n✅ All CI + dependabot configs written")
