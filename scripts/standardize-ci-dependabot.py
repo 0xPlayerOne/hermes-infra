@@ -9,18 +9,18 @@ Fixes:
 5. Missing permission/concurrency blocks
 """
 
-import os, yaml
+import os
 
 REPOS = {
-    "pink-binder":              "/Users/amf/Developer/pink-binder",
-    "v0-portfolio":             "/Users/amf/Developer/v0-portfolio",
-    "nifty-contracts-api":      "/Users/amf/Developer/NiftyLeague/nifty-contracts-api",
-    "nifty-fe-monorepo":        "/Users/amf/Developer/NiftyLeague/nifty-fe-monorepo",
-    "nifty-league-subgraph":    "/Users/amf/Developer/NiftyLeague/nifty-league-subgraph",
-    "nifty-smart-contracts":    "/Users/amf/Developer/NiftyLeague/nifty-smart-contracts",
-    "PlayFabConfigs":           "/Users/amf/Developer/NiftyLeague/PlayFabConfigs",
-    "hermes-infra":             "/Users/amf/Developer/hermes-infra",
-    "model-gateway":            "/Users/amf/Developer/model-gateway",
+    "pink-binder": "/Users/amf/Developer/pink-binder",
+    "v0-portfolio": "/Users/amf/Developer/v0-portfolio",
+    "nifty-contracts-api": "/Users/amf/Developer/NiftyLeague/nifty-contracts-api",
+    "nifty-fe-monorepo": "/Users/amf/Developer/NiftyLeague/nifty-fe-monorepo",
+    "nifty-league-subgraph": "/Users/amf/Developer/NiftyLeague/nifty-league-subgraph",
+    "nifty-smart-contracts": "/Users/amf/Developer/NiftyLeague/nifty-smart-contracts",
+    "PlayFabConfigs": "/Users/amf/Developer/NiftyLeague/PlayFabConfigs",
+    "hermes-infra": "/Users/amf/Developer/hermes-infra",
+    "model-gateway": "/Users/amf/Developer/model-gateway",
 }
 
 # ============================================================
@@ -76,8 +76,14 @@ jobs:
 """
 
 # Repos that should use the standard bun CI template
-BUN_REPOS = ["pink-binder", "v0-portfolio", "nifty-contracts-api", 
-             "nifty-fe-monorepo", "nifty-league-subgraph", "PlayFabConfigs"]
+BUN_REPOS = [
+    "pink-binder",
+    "v0-portfolio",
+    "nifty-contracts-api",
+    "nifty-fe-monorepo",
+    "nifty-league-subgraph",
+    "PlayFabConfigs",
+]
 
 # Special bun repes: nifty-smart-contracts has Hardhat so needs extra steps
 SMART_CONTRACTS_CI = """name: CI
@@ -336,19 +342,22 @@ updates:
       - ci
 """
 
+
 def write_ci(name, content):
     path = os.path.join(REPOS[name], ".github/workflows/ci.yml")
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         f.write(content.lstrip("\n"))
     print(f"  ✓ {name}: CI written ({len(content)} chars)")
+
 
 def write_dependabot(name, content):
     path = os.path.join(REPOS[name], ".github/dependabot.yml")
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         f.write(content.lstrip("\n"))
     print(f"  ✓ {name}: dependabot written ({len(content)} chars)")
+
 
 # ============================================================
 # CI UPDATES
@@ -372,8 +381,13 @@ print("  ✓ model-gateway: CI unchanged (Rust stack)")
 print("\n=== Dependabot ===")
 
 # npm repos (bun-managed but npm ecosystem works for dependabot)
-for name in ["pink-binder", "v0-portfolio", "nifty-contracts-api", 
-             "nifty-fe-monorepo", "nifty-league-subgraph"]:
+for name in [
+    "pink-binder",
+    "v0-portfolio",
+    "nifty-contracts-api",
+    "nifty-fe-monorepo",
+    "nifty-league-subgraph",
+]:
     write_dependabot(name, NPM_DEPENDABOT)
 
 # nifty-smart-contracts npm with labels
