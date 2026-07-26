@@ -5,7 +5,7 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 99
+    open-pull-requests-limit: 10
     target-branch: staging
     labels:
       - dependencies
@@ -22,7 +22,7 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 99
+    open-pull-requests-limit: 10
     target-branch: staging
     labels:
       - dependencies
@@ -39,7 +39,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
-      day: monday
+      day: sunday
     open-pull-requests-limit: 99
     target-branch: staging
     labels:
