@@ -19,7 +19,7 @@ inputs:
     required: false
     default: 'true'
   mise-scope:
-    description: Limit mise installation and language package caches to auto, all, javascript, python, rust, or none.
+    description: Limit mise installation and language package caches to auto, all, javascript, python, or rust.
     required: false
     default: auto
   cache-build:
@@ -351,8 +351,6 @@ runs:
         }
 
         case "$REPO_FOUNDRY_MISE_SCOPE" in
-          none)
-            ;;
           all)
             for tool in node bun python uv ruff rust; do add_configured_tool "$tool"; done
             ;;

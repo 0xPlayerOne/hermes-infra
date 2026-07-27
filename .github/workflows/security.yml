@@ -123,9 +123,7 @@ jobs:
         if: steps.applicability.outputs.applicable == 'true'
         uses: ./.github/actions/setup
         with:
-          # Dependency audits only need the runner's preinstalled Cargo;
-          # pinned mise setup remains enabled for build and test workflows.
-          mise-scope: none
+          mise-scope: rust
       - name: Install cargo-audit
         if: steps.applicability.outputs.applicable == 'true'
         uses: taiki-e/install-action@v2
