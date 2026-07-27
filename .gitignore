@@ -38,17 +38,10 @@ coverage/
 htmlcov/
 .coverage*
 .next/
-artifacts/
-cache/
-typechain/
-coverage.json
-tests/.bin/
-**/.app/
 
 # Logs and temporary files
 *.log
 *.tmp
-*.pid
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*

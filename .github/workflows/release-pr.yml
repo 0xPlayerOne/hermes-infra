@@ -58,7 +58,4 @@ jobs:
             --base main \
             --head staging \
             --title "Release: staging -> main ($DATE)" \
-            --body "Weekly release. Auto-generated on push to staging.
-
-Changes since last main merge:
-  - See commit history for full list"
+            --body-file "$BODY_FILE"

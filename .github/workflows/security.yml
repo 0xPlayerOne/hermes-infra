@@ -22,7 +22,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: jdx/mise-action@v4
+        with: { cache: true }
       - name: Audit dependencies
         run: bash .github/scripts/security.sh
 
