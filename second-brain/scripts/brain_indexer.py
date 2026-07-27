@@ -272,8 +272,12 @@ def save_state(state: dict):
 # ---------------------------------------------------------------------------
 def get_collection():
     import chromadb
+    from chromadb.config import Settings
 
-    client = chromadb.PersistentClient(path=str(CHROMA_DIR))
+    client = chromadb.PersistentClient(
+        path=str(CHROMA_DIR),
+        settings=Settings(anonymized_telemetry=False),
+    )
     return client.get_or_create_collection(
         COLLECTION,
         metadata={"hnsw:space": "cosine"},
