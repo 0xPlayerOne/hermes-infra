@@ -1,6 +1,6 @@
 version: 1
 template: repo-foundry@0.1.4
-languages: rust,python
+languages: auto
 features: all
 package_manager: auto
 release_type: auto
