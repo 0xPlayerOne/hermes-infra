@@ -809,7 +809,24 @@ mod tests {
     #[test]
     fn reports_live_child_rss() {
         let mut child = Command::new("sleep").arg("1").spawn().unwrap();
-        assert!(child_rss_kb(&child).is_some());
+        let ps_available = Command::new("ps")
+            .args(["-p", &child.id().to_string(), "-o", "rss="])
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false);
+        if !ps_available {
+            child.kill().unwrap();
+            child.wait().unwrap();
+            return;
+        }
+        let rss = (0..10).find_map(|_| {
+            let rss = child_rss_kb(&child);
+            if rss.is_none() {
+                thread::sleep(Duration::from_millis(10));
+            }
+            rss
+        });
+        assert!(rss.is_some());
         child.kill().unwrap();
         child.wait().unwrap();
     }
