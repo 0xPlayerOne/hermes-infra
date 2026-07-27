@@ -41,7 +41,7 @@ jobs:
           install-python: ${{ steps.applicability.outputs.python == 'true' }}
           install-rust: ${{ steps.applicability.outputs.rust == 'true' }}
           cache-build: false
-          cache-environment: false
+          cache-environment: true
           task: unit
           task-javascript: ${{ steps.applicability.outputs.javascript }}
           task-python: ${{ steps.applicability.outputs.python }}
