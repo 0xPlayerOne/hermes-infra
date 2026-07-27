@@ -1,0 +1,4 @@
+version: 1
+languages: rust,python
+features: all
+package_manager: auto
