@@ -1,5 +1,4 @@
 version: 1
-template: repo-foundry@0.1.4
 languages: rust,python
 features: all
 package_manager: auto
