@@ -629,8 +629,8 @@ mod tests {
     use super::*;
     use std::net::TcpListener;
     use std::os::unix::fs::PermissionsExt;
-    use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::Mutex;
+    use std::sync::atomic::{AtomicU64, Ordering};
 
     static NEXT_ID: AtomicU64 = AtomicU64::new(1);
     static HEALTH_TEST_LOCK: Mutex<()> = Mutex::new(());
