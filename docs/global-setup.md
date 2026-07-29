@@ -1,44 +1,40 @@
-# Global Hermes Integration
+# Global Hermes integration
 
-This repository is the source of truth for Hermes infrastructure implementations.
+This repository owns Hermes-specific guardrails, fleet maintenance, gateway supervision, MTPLX
+context synchronization, and the Cortana retrieval integration.
 
 ## Repository-owned
 
-- Code indexing: `code-index/indexer.py`, `.venv`, Chroma state under the configured `CHROMA_DIR`
-- Embeddings: `hermes-infra tei` (Rust)
-- Live indexing: `hermes-infra code-index-watch` (Rust)
-- Hindsight service: `hermes-infra hindsight` (Rust)
+- Cortana retrieval instructions: `skills/cortana/SKILL.md`
 - Command safety gate: `scripts/guardian.sh`
-- MTPLX context synchronization: `hermes-infra mtplx-context-sync` (Rust)
-- Second-brain sync and maintenance: `second-brain/scripts/`
-- Cron prompt templates: `cron/`
-- launchd templates: `launchd/`
-- Hermes gateway launchd template: `launchd/ai.hermes.gateway.plist.example`
-- Launchd reconciliation: `"$HERMES_INFRA_VENV/bin/python" "$HERMES_INFRA_DIR/scripts/install_launchd.py" --check`
+- AGENTS.md fleet audit and standardization: `scripts/agents_md_watchdog.py` and related scripts
+- MTPLX context synchronization: `hermes-infra mtplx-context-sync`
+- Hermes gateway and MTPLX launchd templates: `launchd/`
+- Non-ingestion Hermes cron prompt templates: `cron/`
 
-Global Hermes paths are compatibility links or runtime state only:
+## Cortana-owned
 
-- `~/.hermes/scripts/` links to `scripts/`
-- `~/.hermes/code-index/indexer.py` links to `code-index/indexer.py`
-- `~/Developer/second-brain/System/Hermes/*.py` links to `second-brain/scripts/`
-- `~/.hermes/.env` holds machine-local settings and secrets
-- `~/.hermes/code-index/` and `~/.hermes/hindsight/` hold runtime state
-- `~/.mtplx/` and `~/Library/Application Support/MTPLX/` hold MTPLX model/settings state
+Cortana is the source of truth for knowledge connectors, code indexing, Qwen embeddings, the
+canonical evidence store, hybrid retrieval, MCP, HTTP/UI access, backups, and sync scheduling.
+Runtime state lives under `~/.config/cortana` and `~/.local/share/cortana`.
+
+Global Hermes configuration should contain only:
+
+- the installed `cortana` skill;
+- a Cortana MCP entry using the installed binary and absolute config path; and
+- no TEI, Chroma, code-index, second-brain, or Hindsight launch job.
+
+See [`cortana-integration.md`](cortana-integration.md) for the exact boundary and verification.
 
 ## Verification
 
 ```bash
-set -a; source .env; set +a
-"$HERMES_INFRA_VENV/bin/python" "$HERMES_INFRA_DIR/code-index/indexer.py" --status
-curl -fsS http://127.0.0.1:6999/health
-curl -fsS http://127.0.0.1:9177/health
+cortana doctor
+cortana service status
+hermes mcp list
+curl -fsS http://127.0.0.1:7331/ready
+"$HERMES_INFRA_VENV/bin/python" "$HERMES_INFRA_DIR/scripts/install_launchd.py" --check
 ```
 
-Do not edit implementation files in `~/.hermes` or the second-brain vault. Update this repository and reload the affected launchd service.
-
-Use `install_launchd.py --check` to detect drift. Use `--install` only after reviewing the rendered changes; it writes machine-local plists under `$HERMES_LAUNCH_AGENTS_DIR` and bootstraps them with launchd.
-
-Python dependencies are intentionally split because ChromaDB 0.5.23 and Hindsight 0.8.4 require incompatible `tokenizers` versions:
-
-- `.venv`: code index and second-brain workflows
-- `.hindsight-venv`: Hindsight API only
+Use `install_launchd.py --install` only after reviewing rendered changes. It writes machine-local
+plists under `$HERMES_LAUNCH_AGENTS_DIR` and bootstraps them with launchd.

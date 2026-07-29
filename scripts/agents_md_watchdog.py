@@ -2,8 +2,7 @@
 """
 agents_md_watchdog.py — keeps the configured source root AGENTS.md coverage at 100%.
 
-Runs after the Code Indexer cron. For every git repo under the configured source root that
-lacks a root AGENTS.md, it:
+For every git repo under the configured source root that lacks a root AGENTS.md, it:
   1. drops a constitution-stamp immediately via repo_standardize.py (so the repo
      is never agent-blind, even before a full deep-scan),
   2. prints the gap list to stdout (the cron delivers this; a subagent or the
@@ -29,7 +28,7 @@ def resolve_path(value):
 
 
 REPO_ROOT = Path(os.environ.get("HERMES_INFRA_DIR", Path(__file__).resolve().parents[1]))
-DEV = Path(resolve_path(os.environ.get("DEV_ROOT", "~/code")))
+DEV = Path(resolve_path(os.environ.get("DEV_ROOT", "~/Developer")))
 STAMPER = REPO_ROOT / "scripts" / "repo_standardize.py"
 MISGEN = REPO_ROOT / "scripts" / "mise_toml_gen.py"
 
@@ -63,11 +62,10 @@ def curl_ok(url: str, timeout: int = 5) -> str:
 def infra_health() -> tuple[str, str]:
     if os.environ.get("WATCHDOG_INFRA_CHECKS") != "1":
         return "skipped", "skipped"
-    hindsight = curl_ok("http://127.0.0.1:9177/health")
-    tei_health = curl_ok("http://127.0.0.1:6999/health")
-    if tei_health.startswith("healthy"):
-        return hindsight, tei_health
-    return hindsight, curl_ok("http://127.0.0.1:6999/health")
+    return (
+        curl_ok("http://127.0.0.1:7331/health"),
+        curl_ok("http://127.0.0.1:7331/ready"),
+    )
 
 
 def git_roots(dev: Path):
@@ -133,8 +131,8 @@ def detect_stack(r: Path) -> str:
 
 
 def main():
-    hindsight_state, tei_state = infra_health()
-    print(f"INFRA: Hindsight={hindsight_state}; TEI={tei_state}")
+    cortana_state, retrieval_state = infra_health()
+    print(f"INFRA: Cortana={cortana_state}; Retrieval={retrieval_state}")
 
     roots = git_roots(DEV)
     gaps = []

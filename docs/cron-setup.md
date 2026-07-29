@@ -13,12 +13,9 @@ and optional delivery target (local or Discord channel).
 
 | Job | Schedule | Description |
 |-----|----------|-------------|
-| Weekly Knowledge Synthesis | Sunday 23:00 | Extracts facts from conversations → MEMORY.md + Hindsight |
 | Weekly Guardian Audit Review | Sunday 22:00 | Reviews agent safety logs for anomalies |
 | Daily Standup | Configure per profile | Profile-specific standup → `$STANDUP_CHANNEL` |
 | Hourly APFS Snapshot | Every hour | `tmutil snapshot` for backup safety |
-| Second-Brain Sync | Daily 04:40 | Sync second-brain vault with GitHub |
-| Code Indexer | Daily 05:30 | Re-index `$DEV_ROOT` for semantic search |
 | AGENTS.md Watchdog | Daily 05:45 | Audit AGENTS.md coverage across repos |
 
 See `cron/` directory for full prompt text of each job.
@@ -77,18 +74,14 @@ Examples:
 - `0 23 * * 0` — every Sunday at 23:00
 - `0 * * * *` — every hour on the hour
 
-## Dependencies Between Jobs
+## Cortana boundary
 
-The code indexer and AGENTS.md watchdog both depend on TEI (embeddings server)
-being available. Ensure `com.hermes.tei` launchd service is loaded before these
-jobs run. See `docs/tei-setup.md` for TEI setup.
-
-The weekly knowledge synthesis depends on Hindsight (the memory API server).
-Ensure `com.hermes.hindsight` launchd service is loaded. See
-`launchd/com.hermes.hindsight.plist.example`.
+Do not add knowledge ingestion, code indexing, embedding, or memory-provider jobs here. Cortana
+owns those schedules through its service manager. The AGENTS.md watchdog reports Cortana health
+but remains independent of embedding availability.
 
 ## Logs
 
 Cron job output is logged to:
 - Hermes session store (queryable via `hermes sessions`)
-- `$HOME/.hermes/logs/` for service-level logs (TEI, Hindsight, code indexer)
+- `$HOME/.hermes/logs/` for Hermes gateway and agent-level logs
