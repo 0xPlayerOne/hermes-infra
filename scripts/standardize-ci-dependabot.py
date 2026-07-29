@@ -1,4 +1,4 @@
-#!/usr/bin/env -S /Users/amf/.hermes/hermes-agent/venv/bin/python3
+#!/usr/bin/env python3
 """
 Standardize CI workflows + dependabot configs across all 9 repos.
 Fixes:

@@ -20,91 +20,11 @@ Usage:
 Exit 0 = wrote/confirmed, 1 = bad args.
 """
 
-import os
 import sys
 from pathlib import Path
 
-
 # ---- detection ----------------------------------------------------------
-def detect(path: Path) -> dict:
-    """Return detected stack signals."""
-    sig = {
-        "ts": 0,
-        "py": 0,
-        "rust": 0,
-        "cs": 0,
-        "sol": 0,
-        "unity": False,
-        "bun_lock": False,
-        "npm_lock": False,
-        "uv": False,
-        "cargo": False,
-        "sol_tool": None,
-    }
-    for root, dirs, files in os.walk(path):
-        # skip noise
-        dirs[:] = [
-            d
-            for d in dirs
-            if d
-            not in (
-                "node_modules",
-                ".git",
-                "target",
-                "__pycache__",
-                "dist",
-                "build",
-                ".next",
-                "out",
-                "Library",
-            )
-        ]
-        for f in files:
-            p = f.lower()
-            if p.endswith(".sol"):
-                sig["sol"] += 1
-                # forge/hardhat config markers
-                if p in ("foundry.toml", "hardhat.config.ts", "hardhat.config.js"):
-                    sig["sol_tool"] = p
-            if p == "package.json":
-                sig["ts"] += 1
-                # check if under Unity Assets
-                if "Assets" in root.split(os.sep):
-                    sig["unity"] = True
-            elif p in {"pyproject.toml", "requirements.txt"}:
-                sig["py"] += 1
-            elif p == "cargo.toml":
-                sig["rust"] += 1
-                sig["cargo"] = True
-            elif p.endswith(".cs"):
-                sig["cs"] += 1
-            elif p in {"bun.lockb", "bun.lock"}:
-                sig["bun_lock"] = True
-            elif p == "package-lock.json":
-                sig["npm_lock"] = True
-            elif p == "uv.lock":
-                sig["uv"] = True
-            elif p.endswith(".csproj") or p.endswith(".unitypackage"):
-                sig["cs"] += 1
-    return sig
-
-
-def primary_lang(sig: dict) -> str:
-    if sig["rust"] > 0:
-        return "rust"
-    if sig["sol"] > 0:
-        return "solidity"
-    if sig["unity"] or (sig["cs"] > sig["ts"] and sig["cs"] > 0):
-        return "unity-cs"
-    if sig["ts"] > 0 and sig["py"] == 0:
-        return "typescript"
-    if sig["py"] > 0 and sig["ts"] == 0:
-        return "python"
-    if sig["ts"] > 0 and sig["py"] > 0:
-        return "mixed-ts-py"
-    if sig["cs"] > 0:
-        return "unity-cs"
-    return "unknown"
+from stack_detect import detect_signals, primary_lang
 
 
 # ---- AGENTS.md templates ------------------------------------------------
@@ -265,7 +185,7 @@ def main():
         print(f"ERROR: {target} is not a directory", file=sys.stderr)
         sys.exit(1)
 
-    sig = detect(target)
+    sig = detect_signals(target)
     lang = primary_lang(sig)
     repo_name = target.name
     content = agents_md(lang, sig, repo_name)

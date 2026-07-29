@@ -1,4 +1,4 @@
-#!/usr/bin/env -S /Users/amf/.hermes/hermes-agent/venv/bin/python3
+#!/usr/bin/env python3
 """
 Harden all Daily Review cron prompts with explicit phase-based workflow.
 """

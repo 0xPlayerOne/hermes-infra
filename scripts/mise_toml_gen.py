@@ -10,68 +10,15 @@ those are already global — but declares the pin for reproducibility.
 Usage:
   mise_toml_gen.py <repo> [--write]   # print (or --write) the .mise.toml
 """
-
-import os
 import sys
 from pathlib import Path
+
+from stack_detect import detect_signals, primary_lang
 
 # Pinned versions (must match global toolchain)
 NODE = "24.18.0"
 PY = "3.11.15"
 RUST = "1.97.1"
-
-
-def detect(r: Path) -> str:
-    ts = py = sol = cs = rust = 0
-    unity = False
-    for root, dirs, files in os.walk(r):
-        dirs[:] = [
-            d
-            for d in dirs
-            if d
-            not in (
-                "node_modules",
-                ".git",
-                "target",
-                "__pycache__",
-                "dist",
-                "build",
-                ".next",
-                "out",
-                "Library",
-                "bin",
-                "obj",
-            )
-        ]
-        for f in files:
-            p = f.lower()
-            if p.endswith(".sol"):
-                sol += 1
-            elif p == "package.json":
-                ts += 1
-                if "Assets" in root.split(os.sep):
-                    unity = True
-            elif p in ("pyproject.toml", "requirements.txt"):
-                py += 1
-            elif p == "cargo.toml":
-                rust += 1
-            elif p.endswith(".csproj") or p.endswith(".cs"):
-                cs += 1
-    if rust > 0:
-        return "rust"
-    if sol > 0:
-        return "solidity"
-    if unity or (cs > ts and cs > 0):
-        return "unity-cs"
-    if ts > 0 and py == 0:
-        return "typescript"
-    if py > 0 and ts == 0:
-        return "python"
-    if ts > 0 and py > 0:
-        return "mixed-ts-py"
-    if cs > 0:
-        return "unity-cs"
-    return "unknown"
 
 
 def toml_for(stack: str) -> str:
@@ -104,7 +51,7 @@ def main():
     if not repo.is_dir():
         print(f"ERROR: {repo} not a dir", file=sys.stderr)
         sys.exit(1)
-    stack = detect(repo)
+    stack = primary_lang(detect_signals(repo))
     content = toml_for(stack)
     if write:
         out = repo / ".mise.toml"
