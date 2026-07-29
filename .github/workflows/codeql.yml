@@ -1,4 +1,4 @@
-name: CodeQL
+name: Code Foundry
 
 on:
   push:
@@ -15,42 +15,12 @@ permissions:
   packages: read
   security-events: write
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  detect:
-    name: Detect
-    runs-on: ubuntu-latest
-    outputs:
-      languages: ${{ steps.languages.outputs.languages }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - id: languages
-        name: Detect languages
-        run: bash .github/scripts/codeql-languages.sh
-
-  analyze:
-    name: Analyze (${{ matrix.name }})
-    needs: detect
-    if: ${{ !github.event.repository.private }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      max-parallel: 4
-      matrix:
-        include: ${{ fromJSON(needs.detect.outputs.languages) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Initialize
-        uses: github/codeql-action/init@v4
-        with:
-          languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build-mode }}
-      - name: Analyze
-        uses: github/codeql-action/analyze@v4
-        with:
-          category: /language:${{ matrix.language }}
+  codeql:
+    name: CodeQL
+    uses: 0xPlayerOne/code-foundry/.github/workflows/codeql.yml@v0.27.15
+    with:
+      runtime-repository: 0xPlayerOne/code-foundry
+      runtime-ref: v0.27.15
+      runner: ubuntu-latest
+    secrets: inherit

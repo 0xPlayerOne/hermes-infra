@@ -40,6 +40,8 @@ htmlcov/
 .next/
 artifacts/
 cache/
+!.github/actions/cache/
+!.github/actions/cache/action.yml
 typechain/
 coverage.json
 tests/.bin/
@@ -70,4 +72,6 @@ pnpm-debug.log*
 .vercel/
 mise.local.toml
 .mise.local.toml
+mise.local.lock
+.mise.local.lock
 *.code-workspace

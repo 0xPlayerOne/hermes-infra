@@ -1,4 +1,4 @@
-name: Release PR
+name: Code Foundry
 
 on:
   push:
@@ -8,54 +8,10 @@ permissions:
   contents: read
   pull-requests: write
 
-env:
-  GH_TOKEN: ${{ github.token }}
-
 jobs:
-  create-release-pr:
-    name: Create
-    runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: true
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Check
-        id: check-pr
-        run: |
-          EXISTING=$(gh pr list --base main --head staging --state open --json number 2>/dev/null | jq 'length')
-          echo "existing=$EXISTING" >> "$GITHUB_OUTPUT"
-
-      - name: Create
-        if: steps.check-pr.outputs.existing == '0'
-        run: |
-          DATE=$(date +%Y-%m-%d)
-          BODY_FILE="$RUNNER_TEMP/release-pr.md"
-          COMMITS=$(git log --no-merges --pretty=format:'- %s (%h)' origin/main..HEAD)
-          if [ -z "$COMMITS" ]; then
-            COMMITS='- No commits found since main.'
-          fi
-
-          cat > "$BODY_FILE" <<EOF
-          ## Release summary
-
-          Automated release PR from \`staging\` into \`main\` created on $DATE.
-
-          ### Changes since main
-
-          $COMMITS
-
-          ### Validation
-
-          - CI and security checks must pass before merge.
-          - Review migrations, configuration changes, and rollback notes.
-          EOF
-
-          gh pr create \
-            --base main \
-            --head staging \
-            --title "Release: staging -> main ($DATE)" \
-            --body-file "$BODY_FILE"
+  release-pr:
+    name: Release PR
+    uses: 0xPlayerOne/code-foundry/.github/workflows/release-pr.yml@v0.27.15
+    with:
+      runner: ubuntu-slim
+    secrets: inherit

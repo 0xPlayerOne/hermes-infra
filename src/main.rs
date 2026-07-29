@@ -629,9 +629,11 @@ mod tests {
     use super::*;
     use std::net::TcpListener;
     use std::os::unix::fs::PermissionsExt;
+    use std::sync::Mutex;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     static NEXT_ID: AtomicU64 = AtomicU64::new(1);
+    static HEALTH_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     fn temp_path(name: &str) -> PathBuf {
         let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
@@ -790,6 +792,7 @@ mod tests {
 
     #[test]
     fn health_accepts_200_and_rejects_other_statuses() {
+        let _lock = HEALTH_TEST_LOCK.lock().unwrap();
         let (port, handle) = health_server("200 OK");
         assert!(health(port));
         handle.join().unwrap();
@@ -800,6 +803,7 @@ mod tests {
 
     #[test]
     fn health_rejects_closed_port() {
+        let _lock = HEALTH_TEST_LOCK.lock().unwrap();
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let port = listener.local_addr().unwrap().port();
         drop(listener);
