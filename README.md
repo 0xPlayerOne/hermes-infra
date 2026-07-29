@@ -1,169 +1,81 @@
 # hermes-infra
 
-Local-first AI infrastructure: embeddings, semantic indexing, second-brain sync, and agent guardrails — all running on zero-cost models.
+Hermes-specific agent guardrails, fleet maintenance, gateway configuration, and integration with
+the shared [Cortana](https://github.com/0xPlayerOne/cortana) knowledge system.
 
-## Architecture
-
-```
-┌──────────────────────────────────────────────────────┐
-│                    HERMES AGENT                       │
-│          (CLI / Gateway / Desktop / Cron)             │
-└──────┬───────────┬───────────┬───────────┬───────────┘
-       │           │           │           │
-       ▼           ▼           ▼           ▼
-┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
-│  Hindsight│ │ ChromaDB │ │ ChromaDB │ │  Hindsight│
-│  (memory) │ │(code-idx)│ │(2nd-brn) │ │ (recall) │
-└─────┬────┘ └─────┬────┘ └─────┬────┘ └─────┬────┘
-      │            │            │             │
-      └──────┬─────┘            └──────┬──────┘
-             ▼                         ▼
-      ┌─────────────┐         ┌─────────────┐
-      │  TEI Server  │         │  TEI Server  │
-      │ Qwen3-0.6B   │         │ Qwen3-0.6B   │
-      │ :6999        │         │ :6999        │
-      └─────────────┘         └─────────────┘
-```
+Knowledge ingestion, code indexing, embeddings, long-term evidence retrieval, MCP, and the
+second-brain UI are owned by Cortana. This repository deliberately does not run a parallel TEI,
+Chroma, code-index, second-brain, or Hindsight stack.
 
 ## Components
 
-| Component | Purpose | Cost |
-|-----------|---------|------|
-| **TEI Embeddings** | Local text embeddings (Qwen3-0.6B, 1024-dim) | Free |
-| **Code Indexer** | Semantic search over `$DEV_ROOT` repos | Free |
-| **Second-Brain Sync** | GitHub, Apple Notes, Drive → Chroma | Free |
-| **Hindsight** | Long-term memory recall | Local daemon + configured OpenAI-compatible LLM |
-| **Guardian** | Command gatekeeper (blocks destructive ops) | N/A |
-| **AGENTS.md Watchdog** | Ensures fleet-wide agent coverage | Free |
+| Component | Purpose |
+| --- | --- |
+| Cortana skill | Teaches Hermes agents to retrieve durable context before broad discovery |
+| Cortana MCP config | Connects Hermes tools to Cortana's cited hybrid retrieval |
+| Guardian | Blocks destructive shell operations and protects agent/runtime data |
+| AGENTS.md watchdog | Audits instruction coverage across local repositories |
+| MTPLX context sync | Preserves per-model local context-window preferences |
+| Gateway launchd template | Supervises the Hermes gateway |
+| Cron templates | Schedules maintenance unrelated to knowledge ingestion |
 
-## Quick Start
+## Setup
 
 ```bash
-# 1. Install prerequisites
-brew install watchman  # for live file indexing
-
-# 2. Set up TEI (Text Embeddings Inference)
-# See docs/tei-setup.md
-# See docs/hindsight-setup.md for the memory service
-# See docs/global-setup.md for Hermes integration and source-of-truth rules
-
-# 3. Clone and configure
-git clone <this-repo> "$HERMES_INFRA_DIR"
+git clone https://github.com/0xPlayerOne/hermes-infra.git
+cd hermes-infra
 cp templates/.env.example .env
-# Edit .env with your paths
-set -a; source .env; set +a
-
-# 4. Build the Rust infrastructure supervisor
-cargo build --release
-
-# 5. Create the isolated data and Hindsight Python environments
 ./scripts/setup-python.sh
-source .venv/bin/activate
-
-# Install the repository-local pre-commit hook
-git config core.hooksPath .githooks
-
-# 6. Run the indexer
-python code-index/indexer.py --index
-
-# 7. Run the second-brain sync
-python second-brain/scripts/sync.py
+cargo build --release
 ```
 
-## Hindsight LLM provider
+Install and verify Cortana separately, then follow
+[`docs/cortana-integration.md`](docs/cortana-integration.md). Install the portable retrieval skill
+at `$HOME/.hermes/skills/cortana` and enable the Cortana MCP server in Hermes.
 
-Hindsight uses the local Rust supervisor and TEI for embeddings, but its chat and fact-extraction
-LLM is a separately configured OpenAI-compatible endpoint. It does **not** automatically inherit
-Hermes `model.default` or `fallback_providers`; Hindsight accepts one LLM endpoint at a time.
+Install only repository-owned launchd templates:
 
-Configure these values in `$HERMES_HOME/hindsight/config.json` or the environment loaded by the
-Hindsight launch agent:
+```bash
+"$HERMES_INFRA_VENV/bin/python" scripts/install_launchd.py --check
+"$HERMES_INFRA_VENV/bin/python" scripts/install_launchd.py --install
+```
+
+## Directory structure
 
 ```text
-HINDSIGHT_API_LLM_PROVIDER=openai
-HINDSIGHT_API_LLM_BASE_URL=https://provider.example/v1
-HINDSIGHT_API_LLM_MODEL=<structured-output-capable-chat-model>
-HINDSIGHT_LLM_API_KEY=<provider-key>
-```
-
-The old `openrouter/free` default is not a reliability guarantee and is no longer supplied by the
-repository launcher. The configured model must support Hindsight's JSON structured-output request;
-the Hermes `kilo-auto/free` route currently rejects that request. Use an explicit compatible model
-or place a provider-fallback proxy in front of Hindsight.
-
-## Directory Structure
-
-```
 hermes-infra/
-├── src/
-│   └── main.rs                 # Rust supervisors: TEI, watcher, MTPLX
-├── code-index/
-│   ├── indexer.py              # Semantic code indexer (ChromaDB)
-├── second-brain/
-│   └── scripts/
-│       ├── sync.py             # Unified vault sync (GitHub/Notes/Drive)
-│       ├── synthesize.py       # Weekly knowledge synthesis
-│       ├── export_memories.py  # Dashboard exporter
-│       └── google_sync.py      # Google Drive/Email/Calendar
-├── scripts/
-│   ├── guardian.sh             # Shell safety policy and command gate
-│   ├── setup-python.sh         # Shared uv-managed Python environment
-│   ├── agents_md_watchdog.py   # AGENTS.md coverage checker
-│   ├── agents_md_gen.py        # Stitch generated AGENTS.md bodies
-│   ├── repo_standardize.py     # Auto-stamp AGENTS.md
-│   ├── mise_toml_gen.py        # Generate .mise.toml for repos
-│   └── daily_intel.py          # Daily intelligence briefing
-├── launchd/                    # Plist templates (sanitized)
-├── cron/                       # Cron job definitions (sanitized)
-├── templates/                  # Config templates
-│   └── .env.example
-└── docs/                       # Architecture docs
+├── skills/cortana/             # portable retrieval instructions
+├── src/main.rs                 # MTPLX context synchronization
+├── scripts/                    # guardrails and fleet maintenance
+├── launchd/                    # Hermes gateway and MTPLX templates
+├── cron/                       # non-ingestion Hermes schedules
+├── templates/.env.example      # safe integration variables
+└── docs/                       # Cortana, cron, and global setup
 ```
 
-## Design Principles
+## Ownership boundary
 
-- **Local embeddings** — TEI runs locally; Hindsight LLM cost and availability depend on its explicit provider
-- **Live + batch** — Watchman for real-time, cron for catch-up
-- **Memory guardrails** — TEI capped at 2GB RSS, auto-restart on OOM
-- **Guardian-first** — All destructive ops routed through `guardian.sh`
-- **Rust-first** — supervisors in Rust, data workflows in Python, shell only for bootstrap/policy
-- **Idempotent** — Safe to re-run any component
+- Cortana owns `~/.config/cortana`, `~/.local/share/cortana`, ports `6999` and `7331`, embedding
+  supervision, source schedules, backups, and retrieval.
+- Hermes owns its gateway, agent/runtime configuration, guardrails, and unrelated schedules.
+- New knowledge sources belong in Cortana configuration. Do not add a Hermes cron prompt or a
+  second vector database for them.
+- Hindsight and Honcho are optional derived-memory providers evaluated behind Cortana's documented
+  boundary; neither is a canonical store or a Hermes infrastructure dependency.
 
-## Language And Naming
-
-The language choice is based on responsibility, not preference alone:
-
-| Language | Use it for | Why |
-|----------|------------|-----|
-| **Rust** | Long-running services, process supervision, health monitoring, Watchman polling, state synchronization | Strong lifecycle/error handling, low overhead, and reliable daemon behavior |
-| **Python** | ChromaDB, Google APIs, PDF extraction, vault/data transformation, plist rendering, and tests | These workflows depend on mature Python libraries and are dominated by API/data handling rather than process supervision |
-| **Shell** | Guardian command policy, environment/bootstrap setup, and simple system-maintenance composition | These tasks directly intercept shell commands or orchestrate native tools such as `uv`, `cargo`, Homebrew, and `launchctl` |
-
-All new code must follow these rules:
-
-- Rust owns long-running infrastructure. CLI subcommands use `kebab-case`.
-- Python owns data workflows and Python-library integrations. Files use `snake_case.py`.
-- Shell is a last resort for bootstrap, environment loading, policy enforcement, and simple maintenance. Files use `kebab-case.sh`.
-- Do not convert Python data workflows to Rust solely for language uniformity; that would replace stable library integrations with custom OAuth, HTTP, PDF, and database code.
-- Do not convert Guardian or bootstrap scripts to Rust when direct shell semantics are their purpose.
-- Any new executable must be classified against this table in its code review and covered by the corresponding Rust/Python test gate.
-
-## Testing
+## Validation
 
 ```bash
-# Python: unit tests plus branch-aware coverage
+npx code-foundry doctor
 .venv/bin/python -m pytest --cov --cov-report=term-missing
-
-# Rust: formatting, linting, tests, and instrumented coverage
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
-cargo llvm-cov --summary-only
-
-# launchd: detect drift between repo templates and active jobs
-"$HERMES_INFRA_VENV/bin/python" "$HERMES_INFRA_DIR/scripts/install_launchd.py" --check
+cargo test --all-targets
+"$HERMES_INFRA_VENV/bin/python" scripts/install_launchd.py --check
+curl -fsS http://127.0.0.1:7331/ready
 ```
 
-CI enforces at least 80% Python line coverage and 50% Rust line coverage. Rust's remaining uncovered lines are primarily non-returning process supervisors and launchd/Watchman integration branches, which are validated against the live macOS services.
+CI requires at least 80% Python line coverage and 50% Rust line coverage.
 
 ## License
 

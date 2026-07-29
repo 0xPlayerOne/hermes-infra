@@ -36,6 +36,19 @@ def test_watchdog_git_roots_stops_at_repository(load_script, tmp_path):
     assert module.git_roots(tmp_path) == [tmp_path / "one", tmp_path / "two"]
 
 
+def test_watchdog_infra_health_uses_cortana(load_script, monkeypatch):
+    module = load_script("scripts/agents_md_watchdog.py")
+    calls = []
+    monkeypatch.setenv("WATCHDOG_INFRA_CHECKS", "1")
+    monkeypatch.setattr(module, "curl_ok", lambda url: calls.append(url) or "healthy")
+
+    assert module.infra_health() == ("healthy", "healthy")
+    assert calls == [
+        "http://127.0.0.1:7331/health",
+        "http://127.0.0.1:7331/ready",
+    ]
+
+
 def test_watchdog_main_reports_full_coverage(load_script, tmp_path, monkeypatch, capsys):
     module = load_script("scripts/agents_md_watchdog.py")
     repo = tmp_path / "repo"
