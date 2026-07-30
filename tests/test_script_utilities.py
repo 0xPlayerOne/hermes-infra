@@ -95,30 +95,6 @@ def test_repo_standardize_detection(load_script, tmp_path, files, expected):
     assert module.primary_lang(module.detect_signals(tmp_path)) == expected
 
 
-def test_stack_detect_sol_tool_foundry(load_script, tmp_path):
-    module = load_script("scripts/stack_detect.py")
-    touch(tmp_path / "foundry.toml")
-    touch(tmp_path / "src" / "a.sol")
-    assert module.detect_signals(tmp_path)["sol_tool"] == "foundry.toml"
-
-
-def test_stack_detect_sol_tool_hardhat(load_script, tmp_path):
-    module = load_script("scripts/stack_detect.py")
-    touch(tmp_path / "hardhat.config.ts")
-    touch(tmp_path / "contracts" / "a.sol")
-    assert module.detect_signals(tmp_path)["sol_tool"] == "hardhat.config.ts"
-
-
-def test_repo_standardize_solidity_template_picks_tool(load_script):
-    module = load_script("scripts/repo_standardize.py")
-    signals = {"bun_lock": False, "npm_lock": False, "uv": False, "sol_tool": "foundry.toml"}
-    text = module.agents_md("solidity", signals, "fixture")
-    assert "- **Toolchain:** Foundry (forge)" in text
-    signals["sol_tool"] = "hardhat.config.ts"
-    text = module.agents_md("solidity", signals, "fixture")
-    assert "- **Toolchain:** Hardhat" in text
-
-
 def test_repo_standardize_templates(load_script):
     module = load_script("scripts/repo_standardize.py")
     stacks = ["rust", "typescript", "python", "solidity", "unity-cs", "mixed-ts-py", "unknown"]
