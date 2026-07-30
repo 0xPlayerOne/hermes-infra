@@ -1,4 +1,4 @@
-#!/usr/bin/env -S /Users/amf/.hermes/hermes-agent/venv/bin/python3
+#!/usr/bin/env python3
 """
 send-thread-directive.py — Post a directive as Ye to one or all maintenance threads.
 
