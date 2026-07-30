@@ -27,7 +27,6 @@ def load_script(monkeypatch, tmp_path):
     monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
     monkeypatch.setenv("HERMES_INFRA_DIR", str(ROOT))
     monkeypatch.setenv("DEV_ROOT", str(tmp_path / "code"))
-    monkeypatch.setenv("SECOND_BRAIN_DIR", str(tmp_path / "brain"))
     monkeypatch.setenv("DOCUMENTS_DIR", str(tmp_path / "documents"))
     monkeypatch.setenv("WORK_SECTION", "Work")
     monkeypatch.setenv("PERSONAL_SECTION", "Personal")
