@@ -16,10 +16,21 @@ Usage:
 import os
 from pathlib import Path
 
-IGNORED_DIRS = frozenset({
-    "node_modules", ".git", "target", "__pycache__", "dist", "build",
-    ".next", "out", "Library", "bin", "obj",
-})
+IGNORED_DIRS = frozenset(
+    {
+        "node_modules",
+        ".git",
+        "target",
+        "__pycache__",
+        "dist",
+        "build",
+        ".next",
+        "out",
+        "Library",
+        "bin",
+        "obj",
+    }
+)
 
 
 def detect_signals(path: Path) -> dict:

@@ -10,6 +10,7 @@ those are already global — but declares the pin for reproducibility.
 Usage:
   mise_toml_gen.py <repo> [--write]   # print (or --write) the .mise.toml
 """
+
 import sys
 from pathlib import Path
 
