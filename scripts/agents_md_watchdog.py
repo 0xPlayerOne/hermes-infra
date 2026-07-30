@@ -21,6 +21,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from stack_detect import detect_signals, primary_lang
+
 
 def resolve_path(value):
     """Expand shell-style environment variables and a leading home marker."""
@@ -77,59 +79,6 @@ def git_roots(dev: Path):
     return sorted(roots)
 
 
-def detect_stack(r: Path) -> str:
-    """Lightweight stack detection — mirrors repo_standardize.py logic.
-    Returns one of: typescript, python, rust, solidity, unity-cs, mixed-ts-py, unknown."""
-    ts = py = sol = cs = 0
-    unity = False
-    for root, dirs, files in os.walk(r):
-        dirs[:] = [
-            d
-            for d in dirs
-            if d
-            not in (
-                "node_modules",
-                ".git",
-                "target",
-                "__pycache__",
-                "dist",
-                "build",
-                ".next",
-                "out",
-                "Library",
-                "bin",
-                "obj",
-            )
-        ]
-        for f in files:
-            p = f.lower()
-            if p.endswith(".sol"):
-                sol += 1
-            elif p == "package.json":
-                ts += 1
-                if "Assets" in root.split(os.sep):
-                    unity = True
-            elif p in ("pyproject.toml", "requirements.txt"):
-                py += 1
-            elif p == "cargo.toml":
-                return "rust"
-            elif p.endswith(".csproj") or p.endswith(".cs"):
-                cs += 1
-    if sol > 0:
-        return "solidity"
-    if unity or (cs > ts and cs > 0):
-        return "unity-cs"
-    if ts > 0 and py == 0:
-        return "typescript"
-    if py > 0 and ts == 0:
-        return "python"
-    if ts > 0 and py > 0:
-        return "mixed-ts-py"
-    if cs > 0:
-        return "unity-cs"
-    return "unknown"
-
-
 def main():
     cortana_state, retrieval_state = infra_health()
     print(f"INFRA: Cortana={cortana_state}; Retrieval={retrieval_state}")
@@ -151,8 +100,9 @@ def main():
         # IMMEDIATE FALLBACK STAMP — only for stacks the detector gets RIGHT.
         # C# is ambiguous (Unity vs Azure Functions vs plain .NET) — do NOT auto-stamp
         # it, or we write a wrong manual. TS/Py/Solidity/Rust detection is reliable.
-        sig = detect_stack(r)
-        if sig in ("typescript", "python", "solidity", "rust", "mixed-ts-py") and STAMPER.exists():
+        sig = detect_signals(r)
+        lang = primary_lang(sig)
+        if lang in ("typescript", "python", "solidity", "rust", "mixed-ts-py") and STAMPER.exists():
             subprocess.run(
                 [sys.executable, str(STAMPER), "--force", str(r)],
                 stdout=subprocess.DEVNULL,

@@ -25,7 +25,7 @@ def test_watchdog_detect_stack(load_script, tmp_path, files, expected):
     module = load_script("scripts/agents_md_watchdog.py")
     for filename in files:
         touch(tmp_path / filename)
-    assert module.detect_stack(tmp_path) == expected
+    assert module.primary_lang(module.detect_signals(tmp_path)) == expected
 
 
 def test_watchdog_git_roots_stops_at_repository(load_script, tmp_path):
@@ -92,7 +92,7 @@ def test_repo_standardize_detection(load_script, tmp_path, files, expected):
     module = load_script("scripts/repo_standardize.py")
     for filename in files:
         touch(tmp_path / filename)
-    assert module.primary_lang(module.detect(tmp_path)) == expected
+    assert module.primary_lang(module.detect_signals(tmp_path)) == expected
 
 
 def test_repo_standardize_templates(load_script):
@@ -140,7 +140,7 @@ def test_mise_detection_and_toml(load_script, tmp_path, files, expected):
     module = load_script("scripts/mise_toml_gen.py")
     for filename in files:
         touch(tmp_path / filename)
-    stack = module.detect(tmp_path)
+    stack = module.primary_lang(module.detect_signals(tmp_path))
     assert stack == expected
     assert module.toml_for(stack).startswith("[tools]")
 
