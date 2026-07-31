@@ -4,48 +4,39 @@
 import json
 import subprocess
 
+from repo_registry import REPO_NAMES, REPO_REMOTES
+
 CWD = "/Users/amf/Developer/pink-binder"
 
-REPOS = [
-    (
-        "pink-binder",
-        "0xPlayerOne/pink-binder",
-        ["Build, Format, Lint & Type Check", "Test", "Security Scan", "Vercel Preview Comments"],
-    ),
-    (
-        "v0-portfolio",
-        "0xPlayerOne/v0-portfolio",
-        ["Build, Format, Lint & Type Check", "Test", "Vercel Preview Comments"],
-    ),
-    (
-        "nifty-contracts-api",
-        "NiftyLeague/nifty-contracts-api",
-        [
-            "Build, Format, Lint & Type Check",
-            "CI / Test",
-            "Review dependency changes",
-            "Vercel Preview Comments",
-        ],
-    ),
-    (
-        "nifty-fe-monorepo",
-        "NiftyLeague/nifty-fe-monorepo",
-        ["Build, Format, Lint & Type Check", "Test", "Vercel Preview Comments"],
-    ),
-    (
-        "nifty-league-subgraph",
-        "NiftyLeague/nifty-league-subgraph",
-        ["Build, Format, Lint & Type Check", "Test", "Security Scan", "CodeQL"],
-    ),
-    (
-        "nifty-smart-contracts",
-        "NiftyLeague/nifty-smart-contracts",
-        ["Build, Format, Lint & Type Check", "Test"],
-    ),
-    ("PlayFabConfigs", "NiftyLeague/PlayFabConfigs", ["Build, Format, Lint & Type Check", "Test"]),
-    ("hermes-infra", "0xPlayerOne/hermes-infra", ["rust", "scripts"]),
-    ("model-gateway", "0xPlayerOne/model-gateway", ["rust", "security", "dependencies"]),
-]
+# Per-repo required CI checks (repo registry provides names + remotes).
+CHECKS = {
+    "pink-binder": [
+        "Build, Format, Lint & Type Check",
+        "Test",
+        "Security Scan",
+        "Vercel Preview Comments",
+    ],
+    "v0-portfolio": ["Build, Format, Lint & Type Check", "Test", "Vercel Preview Comments"],
+    "nifty-contracts-api": [
+        "Build, Format, Lint & Type Check",
+        "CI / Test",
+        "Review dependency changes",
+        "Vercel Preview Comments",
+    ],
+    "nifty-fe-monorepo": ["Build, Format, Lint & Type Check", "Test", "Vercel Preview Comments"],
+    "nifty-league-subgraph": [
+        "Build, Format, Lint & Type Check",
+        "Test",
+        "Security Scan",
+        "CodeQL",
+    ],
+    "nifty-smart-contracts": ["Build, Format, Lint & Type Check", "Test"],
+    "PlayFabConfigs": ["Build, Format, Lint & Type Check", "Test"],
+    "hermes-infra": ["rust", "scripts"],
+    "model-gateway": ["rust", "security", "dependencies"],
+}
+
+REPOS = [(name, REPO_REMOTES[name], CHECKS[name]) for name in REPO_NAMES]
 
 
 def apply_protection(repo, remote, checks):
