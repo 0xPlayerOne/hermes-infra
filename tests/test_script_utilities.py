@@ -25,7 +25,7 @@ def test_watchdog_detect_stack(load_script, tmp_path, files, expected):
     module = load_script("scripts/agents_md_watchdog.py")
     for filename in files:
         touch(tmp_path / filename)
-    assert module.detect_stack(tmp_path) == expected
+    assert module.primary_lang(module.detect_signals(tmp_path)) == expected
 
 
 def test_watchdog_git_roots_stops_at_repository(load_script, tmp_path):
@@ -92,7 +92,31 @@ def test_repo_standardize_detection(load_script, tmp_path, files, expected):
     module = load_script("scripts/repo_standardize.py")
     for filename in files:
         touch(tmp_path / filename)
-    assert module.primary_lang(module.detect(tmp_path)) == expected
+    assert module.primary_lang(module.detect_signals(tmp_path)) == expected
+
+
+def test_stack_detect_sol_tool_foundry(load_script, tmp_path):
+    module = load_script("scripts/stack_detect.py")
+    touch(tmp_path / "foundry.toml")
+    touch(tmp_path / "src" / "a.sol")
+    assert module.detect_signals(tmp_path)["sol_tool"] == "foundry.toml"
+
+
+def test_stack_detect_sol_tool_hardhat(load_script, tmp_path):
+    module = load_script("scripts/stack_detect.py")
+    touch(tmp_path / "hardhat.config.ts")
+    touch(tmp_path / "contracts" / "a.sol")
+    assert module.detect_signals(tmp_path)["sol_tool"] == "hardhat.config.ts"
+
+
+def test_repo_standardize_solidity_template_picks_tool(load_script):
+    module = load_script("scripts/repo_standardize.py")
+    signals = {"bun_lock": False, "npm_lock": False, "uv": False, "sol_tool": "foundry.toml"}
+    text = module.agents_md("solidity", signals, "fixture")
+    assert "- **Toolchain:** Foundry (forge)" in text
+    signals["sol_tool"] = "hardhat.config.ts"
+    text = module.agents_md("solidity", signals, "fixture")
+    assert "- **Toolchain:** Hardhat" in text
 
 
 def test_repo_standardize_templates(load_script):
@@ -140,7 +164,7 @@ def test_mise_detection_and_toml(load_script, tmp_path, files, expected):
     module = load_script("scripts/mise_toml_gen.py")
     for filename in files:
         touch(tmp_path / filename)
-    stack = module.detect(tmp_path)
+    stack = module.primary_lang(module.detect_signals(tmp_path))
     assert stack == expected
     assert module.toml_for(stack).startswith("[tools]")
 
@@ -156,6 +180,38 @@ def test_mise_main_print_write_and_skip(load_script, tmp_path, monkeypatch, caps
     assert (tmp_path / ".mise.toml").exists()
     module.main()
     assert "SKIP" in capsys.readouterr().out
+
+
+def test_repo_registry_is_complete_and_consistent(load_script):
+    module = load_script("scripts/repo_registry.py")
+    assert len(module.REPO_NAMES) == 9
+    assert len(set(module.REPO_NAMES)) == 9  # unique display names
+    assert module.REPO_REMOTES["hermes-infra"] == "0xPlayerOne/hermes-infra"
+    assert module.REPO_PATHS["model-gateway"].endswith("model-gateway")
+    # Every name must resolve in both derived maps.
+    for name in module.REPO_NAMES:
+        assert name in module.REPO_REMOTES
+        assert name in module.REPO_PATHS
+
+
+def test_apply_staging_uses_registry(load_script):
+    module = load_script("scripts/apply-staging-protections.py")
+    names = [name for name, _ in module.REPOS]
+    assert names == module.REPO_NAMES
+    assert ("hermes-infra", "0xPlayerOne/hermes-infra") in module.REPOS
+
+
+def test_apply_main_uses_registry(load_script):
+    module = load_script("scripts/apply-main-protections.py")
+    names = [name for name, _, _ in module.REPOS]
+    assert names == module.REPO_NAMES
+    assert module.CHECKS["hermes-infra"] == ["rust", "scripts"]
+
+
+def test_standardize_ci_uses_registry(load_script):
+    module = load_script("scripts/standardize-ci-dependabot.py")
+    assert module.REPOS is module.REPO_PATHS
+    assert module.REPOS["pink-binder"].endswith("pink-binder")
 
 
 def test_agents_gen_file_stdin_force_and_skip(load_script, tmp_path, monkeypatch, capsys):

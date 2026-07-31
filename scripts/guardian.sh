@@ -9,8 +9,6 @@
 # Usage (agents call THIS instead of raw terminal):
 #   guardian.sh "<command>"
 #   guardian.sh --confirm "<command>"   # bypass interactive prompt (cron mode)
-#   guardian.sh --second-brain "<command>"   # second-brain full-control over its vault+trash
-#   (also: SECOND_BRAIN=1 env grants the same; FORBIDDEN patterns still block)
 #
 # Exit codes:
 #   0 = executed
@@ -51,26 +49,21 @@ resolve_path() {
 
 HERMES_HOME="$(resolve_path "${HERMES_HOME:-$HOME/.hermes}")"
 DEV_ROOT="$(resolve_path "${DEV_ROOT:-$HOME/code}")"
-SECOND_BRAIN_DIR="$(resolve_path "${SECOND_BRAIN_DIR:-$HOME/second-brain}")"
-SECOND_BRAIN_TRASH_DIR="$(resolve_path "${SECOND_BRAIN_TRASH_DIR:-$HOME/Desktop/trash-drive-flat}")"
-CODE_INDEX_DIR="${HERMES_INFRA_DIR:-$REPO_ROOT}/code-index"
 
 # ---------------------------------------------------------------------------
-# 0. FLAG PARSING — supports --confirm and --second-brain (and SECOND_BRAIN env)
-#    --second-brain: grants the second-brain system full control over its OWN
-#      vault (~/Developer/second-brain) and its designated trash
-#      (~/Desktop/trash-drive-flat). FORBIDDEN patterns still always block.
+# 0. FLAG PARSING
 # ---------------------------------------------------------------------------
-SB=0
 CONFIRM=0
 while [[ "${1:-}" == --* ]]; do
   case "$1" in
-    --second-brain) SB=1; shift;;
     --confirm) CONFIRM=1; shift;;
-    *) break;;
+    --) shift; break;;
+    *)
+      echo "guardian: unsupported option: '$1'" >&2
+      exit 1
+      ;;
   esac
 done
-[ -n "${SECOND_BRAIN:-}" ] && SB=1
 
 CMD="${1:-}"
 if [ -z "$CMD" ]; then
@@ -113,6 +106,14 @@ for pat in "${FORBIDDEN_EXACT[@]}"; do
       echo "guardian: BLOCKED — forbidden pattern: '$pat'" | tee -a "$LOG" >&2
       exit 1
     fi
+  elif [[ "$pat" == "git push --force" || "$pat" == "git push -f" ]]; then
+    # Block only a BARE force push (--force / -f). The safe rebase protocol
+    # `git push --force-with-lease` must pass: it is not a substring match.
+    if [[ "$CMD" =~ (^|[^a-zA-Z])git[[:space:]]+push[[:space:]]+--force([^a-zA-Z-]|$) ]] \
+      || [[ "$CMD" =~ (^|[^a-zA-Z])git[[:space:]]+push[[:space:]]+-f([^a-zA-Z-]|$) ]]; then
+      echo "guardian: BLOCKED — forbidden pattern: '$pat'" | tee -a "$LOG" >&2
+      exit 1
+    fi
   else
     # Other patterns: substring is fine (mkfs, fdisk, etc.)
     if [[ "$CMD" == *"$pat"* ]]; then
@@ -145,65 +146,6 @@ fi
 # path and are explicitly permitted (no sentinel needed).
 
 # ---------------------------------------------------------------------------
-# 1.5 SECOND-BRAIN EXEMPTION
-#   When --second-brain is set (or SECOND_BRAIN env), the second-brain system
-#   is trusted with full control over its OWN vault and its designated trash.
-#   We only relax protection when EVERY absolute path in the command lives
-#   inside an SB-approved root; any path outside those roots falls through to
-#   the normal protected-path block below. FORBIDDEN patterns (rm -rf /, mkfs,
-#   format, etc.) are NEVER relaxed.
-# ---------------------------------------------------------------------------
-SB_OK_ROOTS=("$SECOND_BRAIN_DIR" "$SECOND_BRAIN_TRASH_DIR")
-sb_paths_clean=1
-for tok in $CMD; do
-  case "$tok" in
-    /*)
-      tok_ok=0
-      for okroot in "${SB_OK_ROOTS[@]}"; do
-        case "$tok" in
-          "$okroot"|"$okroot"/*) tok_ok=1; break;;
-        esac
-      done
-      if [ "$tok_ok" -eq 0 ]; then sb_paths_clean=0; break; fi
-      ;;
-  esac
-done
-SB_EXEMPT=0
-if [ "$SB" -eq 1 ] && [ "$sb_paths_clean" -eq 1 ]; then
-  SB_EXEMPT=1
-  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) SBEXEMPT: second-brain full-control granted for: $CMD" >> "$LOG"
-fi
-
-# ---------------------------------------------------------------------------
-# 1.6 SECOND-BRAIN VAULT AUTO-EXEMPTION
-#   The second-brain vault (~/Developer/second-brain) is the user's personal
-#   knowledge base — the agent should have full read/write/delete access WITHOUT
-#   requiring the --second-brain flag. This auto-exemption applies ONLY to
-#   paths strictly under the vault root. The chroma DB (~/.hermes/second-brain-chroma)
-#   remains PROTECTED as critical infrastructure.
-# ---------------------------------------------------------------------------
-SB_VAULT_ROOT="$SECOND_BRAIN_DIR"
-sb_vault_exempt=0
-if [[ "$CMD" == *"$SB_VAULT_ROOT"* ]]; then
-  # Verify ALL absolute paths in command are under the vault root (or trash)
-  sb_vault_clean=1
-  for tok in $CMD; do
-    case "$tok" in
-      /*)
-        case "$tok" in
-          "$SB_VAULT_ROOT"|"$SB_VAULT_ROOT"/*|"$HOME/Desktop/trash-drive-flat"|"$HOME/Desktop/trash-drive-flat"/*) ;;
-          *) sb_vault_clean=0; break;;
-        esac
-      ;;
-    esac
-  done
-  if [ "$sb_vault_clean" -eq 1 ]; then
-    sb_vault_exempt=1
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) SBVAULTEXEMPT: second-brain vault auto-exempt for: $CMD" >> "$LOG"
-  fi
-fi
-
-# ---------------------------------------------------------------------------
 # 2. PROTECTED PATHS — cannot be deleted/moved/formatted
 #    Agents may READ these but not DESTROY them.
 # ---------------------------------------------------------------------------
@@ -211,24 +153,21 @@ PROTECTED=(
   "$HOME" "$HOME/" "/Users" "/usr" "/bin" "/sbin" "/opt/homebrew"
   "$HERMES_HOME" "$HERMES_HOME/" "$HOME/.ssh" "$HOME/.config"
   "$DEV_ROOT" "$DEV_ROOT/"
-  "$SECOND_BRAIN_DIR" "$HERMES_HOME/code-index"
-  "$CODE_INDEX_DIR" "$HERMES_HOME/second-brain-chroma" "$HERMES_HOME/skills"
+  "$HERMES_HOME/skills"
 )
 
 # Detect destructive verbs targeting protected paths
 # Use word boundaries so 'rm' matches the command, not the 'rm' in 'hermes'
 if [[ "$CMD" =~ (^|[^a-zA-Z])(rm|rmdir|mv|del|format|erase|wipe|purge|trash)([^a-zA-Z]|$) ]]; then
-  if [ "$SB_EXEMPT" -ne 1 ] && [ "$sb_vault_exempt" -ne 1 ]; then
-    for prot in "${PROTECTED[@]}"; do
-      # expand ~ in protected path
-      prot_exp="${prot/#\\~/$HOME}"
-      # exact match or path-prefix match (with trailing /), NOT substring
-      if [[ "$CMD" == "$prot_exp" || "$CMD" == "$prot_exp/"* || "$CMD" == *" $prot_exp "* || "$CMD" == *" $prot_exp/"* ]]; then
-        echo "guardian: BLOCKED — protected path in destructive command: '$prot'" | tee -a "$LOG" >&2
-        exit 2
-      fi
-    done
-  fi
+  for prot in "${PROTECTED[@]}"; do
+    # expand ~ in protected path
+    prot_exp="${prot/#\\~/$HOME}"
+    # exact match or path-prefix match (with trailing /), NOT substring
+    if [[ "$CMD" == "$prot_exp" || "$CMD" == "$prot_exp/"* || "$CMD" == *" $prot_exp" || "$CMD" == *" $prot_exp "* || "$CMD" == *" $prot_exp/"* ]]; then
+      echo "guardian: BLOCKED — protected path in destructive command: '$prot'" | tee -a "$LOG" >&2
+      exit 2
+    fi
+  done
 fi
 
 # ---------------------------------------------------------------------------
@@ -253,49 +192,22 @@ if [[ "$CMD" =~ (^|[^a-zA-Z])(rm|rmdir|mv|trash|del|purge)([^a-zA-Z]|$) ]]; then
 fi
 
 if [ "$DESTRUCTIVE" -eq 1 ]; then
-  # Under second-brain full-control, files move only within SB roots (e.g. to
-  # trash) — no irreversible deletion — so skip the APFS snapshot (keeps logs
-  # clean; the trash dir is the recoverability layer).
-  # Also skip for second-brain vault operations (sb_vault_exempt=1).
-  if [ "$SB_EXEMPT" -ne 1 ] && [ "$sb_vault_exempt" -ne 1 ]; then
-    SNAP_NAME="guardian-$(date +%Y%m%d-%H%M%S)"
-    if tmutil snapshot 2>/dev/null; then
-      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) SNAP: $SNAP_NAME" >> "$LOG"
-    else
-      echo "guardian: ABORTED — snapshot failed (cannot guarantee recoverability)" | tee -a "$LOG" >&2
-      exit 5
-    fi
+  SNAP_NAME="guardian-$(date +%Y%m%d-%H%M%S)"
+  if tmutil snapshot 2>/dev/null; then
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) SNAP: $SNAP_NAME" >> "$LOG"
+  else
+    echo "guardian: ABORTED — snapshot failed (cannot guarantee recoverability)" | tee -a "$LOG" >&2
+    exit 5
   fi
 
-  if [ "$CONFIRM" -eq 0 ] && [ "$SB_EXEMPT" -ne 1 ] && [ "$sb_vault_exempt" -ne 1 ]; then
+  if [ "$CONFIRM" -eq 0 ]; then
     echo "guardian: DESTRUCTIVE command requires confirmation. Re-run with --confirm or approve." | tee -a "$LOG" >&2
     exit 4
   fi
 fi
 
 # ---------------------------------------------------------------------------
-# 5. WRITE-PROTECTED FILES — never edited/overwritten without explicit ask
-#    Blocks shell-level writes to the indexer (the agent's own patch/write_file
-#    tools are the normal edit path, but this catches shell escapes too).
-#    The model is locked to Qwen/Qwen3-Embedding-0.6B — do not swap/edit indexer.py
-#    or reindex logic unless the user explicitly requested it.
-# ---------------------------------------------------------------------------
-WRITE_PROTECTED=(
-  "$CODE_INDEX_DIR/indexer.py"
-)
-for wp in "${WRITE_PROTECTED[@]}"; do
-  wp_exp="${wp/#\~/$HOME}"
-  if [[ "$CMD" == *"$wp_exp"* || "$CMD" == *"$(basename "$wp_exp")"* ]]; then
-    # allow pure reads (cat/head/less/read), block writes
-    if [[ "$CMD" =~ (>[[:space:]]|>>[[:space:]]|echo[[:space:]].*indexer\.py|sed[[:space:]]+-i|cp[[:space:]]|mv[[:space:]]|tee[[:space:]]|patch[[:space:]]|ln[[:space:]]+-sf|curl[[:space:]].*indexer|wget[[:space:]].*indexer) ]]; then
-      echo "guardian: BLOCKED — write to write-protected file: '$wp' (indexer is user-owned; ask before editing)" | tee -a "$LOG" >&2
-      exit 6
-    fi
-  fi
-done
-
-# ---------------------------------------------------------------------------
-# 6. MODEL DOWNLOADS — never pull/create/copy Ollama models unless the user
+# 5. MODEL DOWNLOADS — never pull/create/copy Ollama models unless the user
 #    explicitly requested it. Allowed only when the command carries the
 #    explicit token '--allow-model-download' (which the agent must only add
 #    when the user literally asked for a model).
@@ -310,7 +222,7 @@ if [[ "$CMD" =~ (ollama[[:space:]]+pull|ollama[[:space:]]+create|ollama[[:space:
 fi
 
 # ---------------------------------------------------------------------------
-# 8. EXECUTE (with logging)
+# 6. EXECUTE (with logging)
 # ---------------------------------------------------------------------------
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) EXEC: $CMD" >> "$LOG"
 eval "$CMD"
