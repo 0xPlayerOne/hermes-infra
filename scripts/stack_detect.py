@@ -54,8 +54,10 @@ def detect_signals(path: Path) -> dict:
             p = f.lower()
             if p.endswith(".sol"):
                 sig["sol"] += 1
-                if p in ("foundry.toml", "hardhat.config.ts", "hardhat.config.js"):
-                    sig["sol_tool"] = p
+            elif p in ("foundry.toml", "hardhat.config.ts", "hardhat.config.js"):
+                # Solidity toolchain configs identify the tool even though they
+                # are not .sol files; detect them separately so sol_tool works.
+                sig["sol_tool"] = p
             elif p == "package.json":
                 sig["ts"] += 1
                 if "Assets" in root.split(os.sep):
