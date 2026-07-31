@@ -106,6 +106,14 @@ for pat in "${FORBIDDEN_EXACT[@]}"; do
       echo "guardian: BLOCKED — forbidden pattern: '$pat'" | tee -a "$LOG" >&2
       exit 1
     fi
+  elif [[ "$pat" == "git push --force" || "$pat" == "git push -f" ]]; then
+    # Block only a BARE force push (--force / -f). The safe rebase protocol
+    # `git push --force-with-lease` must pass: it is not a substring match.
+    if [[ "$CMD" =~ (^|[^a-zA-Z])git[[:space:]]+push[[:space:]]+--force([^a-zA-Z-]|$) ]] \
+      || [[ "$CMD" =~ (^|[^a-zA-Z])git[[:space:]]+push[[:space:]]+-f([^a-zA-Z-]|$) ]]; then
+      echo "guardian: BLOCKED — forbidden pattern: '$pat'" | tee -a "$LOG" >&2
+      exit 1
+    fi
   else
     # Other patterns: substring is fine (mkfs, fdisk, etc.)
     if [[ "$CMD" == *"$pat"* ]]; then
