@@ -11,17 +11,10 @@ Fixes:
 
 import os
 
-REPOS = {
-    "pink-binder": "/Users/amf/Developer/pink-binder",
-    "v0-portfolio": "/Users/amf/Developer/v0-portfolio",
-    "nifty-contracts-api": "/Users/amf/Developer/NiftyLeague/nifty-contracts-api",
-    "nifty-fe-monorepo": "/Users/amf/Developer/NiftyLeague/nifty-fe-monorepo",
-    "nifty-league-subgraph": "/Users/amf/Developer/NiftyLeague/nifty-league-subgraph",
-    "nifty-smart-contracts": "/Users/amf/Developer/NiftyLeague/nifty-smart-contracts",
-    "PlayFabConfigs": "/Users/amf/Developer/NiftyLeague/PlayFabConfigs",
-    "hermes-infra": "/Users/amf/Developer/hermes-infra",
-    "model-gateway": "/Users/amf/Developer/model-gateway",
-}
+from repo_registry import REPO_PATHS
+
+# Canonical repo name -> local checkout path (see repo_registry.py).
+REPOS = REPO_PATHS
 
 # ============================================================
 # STANDARD CI TEMPLATE for bun/TS repos
