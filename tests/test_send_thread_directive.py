@@ -1,6 +1,5 @@
 """Tests for scripts/send-thread-directive.py."""
 
-import os
 import sys
 
 import pytest
@@ -18,8 +17,8 @@ def _make_env(hermes_dir):
 
 
 def _redirect_home(monkeypatch, tmp_path):
-    """Redirect ~ to tmp_path so os.path.expanduser('~/.hermes/...') resolves under tmp_path."""
-    monkeypatch.setattr(os.path, "expanduser", lambda p: str(tmp_path) + p[1:])
+    """Redirect ``~`` through HOME without replacing stdlib path helpers."""
+    monkeypatch.setenv("HOME", str(tmp_path))
 
 
 def _stub_discord_tool(gateway_dir, content=None):
