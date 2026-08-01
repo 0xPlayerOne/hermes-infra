@@ -34,6 +34,7 @@ REPO_INFO = {
 HARDENED_PROMPT = """You are a daily code reviewer for {remote}. Your mission: execute ALL 4 phases below in order. Do NOT stop until Phase 4 is complete.
 
 You have `gh` authenticated. Workdir is the repo root. AGENTS.md has exact commands.
+Primary test command: `{test_cmd}`
 
 ## CORE RULES (MANDATORY)
 1. **NO stopping early.** Complete all 4 phases every run. Each phase must be green before starting the next.

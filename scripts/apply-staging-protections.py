@@ -7,8 +7,6 @@ import sys
 
 from repo_registry import REPO_NAMES, REPO_REMOTES
 
-CWD = "/Users/amf/Developer/pink-binder"
-
 REPOS = [(name, REPO_REMOTES[name]) for name in REPO_NAMES]
 
 # Staging protection rules per user's requirements:
@@ -32,10 +30,6 @@ PAYLOAD = {
 
 
 def main() -> int:
-    payload_file = "/tmp/staging-protection.json"
-    with open(payload_file, "w") as f:
-        json.dump(PAYLOAD, f)
-
     for name, remote in REPOS:
         print(f"\n--- {name} ({remote}) ---")
         r = subprocess.run(
@@ -45,13 +39,14 @@ def main() -> int:
                 f"repos/{remote}/branches/staging/protection",
                 "--method",
                 "PUT",
-                "--input",
-                payload_file,
+                "-H",
+                "Content-Type: application/json",
+                "-f",
+                f"payload={json.dumps(PAYLOAD)}",
             ],
             capture_output=True,
             text=True,
             timeout=30,
-            cwd=CWD,
         )
         if r.returncode == 0:
             print("  ✅ Staging protection applied")

@@ -78,7 +78,7 @@ BUN_REPOS = [
     "PlayFabConfigs",
 ]
 
-# Special bun repes: nifty-smart-contracts has Hardhat so needs extra steps
+# Special bun repos: nifty-smart-contracts has Hardhat so needs extra steps
 SMART_CONTRACTS_CI = """name: CI
 
 on:
@@ -336,20 +336,21 @@ updates:
 """
 
 
-def write_ci(name, content):
-    path = os.path.join(REPOS[name], ".github/workflows/ci.yml")
+def write_file(name, relative_path, content, kind):
+    """Write *content* under a repo checkout, creating parent directories."""
+    path = os.path.join(REPOS[name], relative_path)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         f.write(content.lstrip("\n"))
-    print(f"  ✓ {name}: CI written ({len(content)} chars)")
+    print(f"  ✓ {name}: {kind} written ({len(content)} chars)")
+
+
+def write_ci(name, content):
+    write_file(name, ".github/workflows/ci.yml", content, "CI")
 
 
 def write_dependabot(name, content):
-    path = os.path.join(REPOS[name], ".github/dependabot.yml")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(content.lstrip("\n"))
-    print(f"  ✓ {name}: dependabot written ({len(content)} chars)")
+    write_file(name, ".github/dependabot.yml", content, "dependabot")
 
 
 if __name__ == "__main__":
