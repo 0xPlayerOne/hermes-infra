@@ -24,15 +24,18 @@ RUST = "1.97.1"
 
 def toml_for(stack: str) -> str:
     lines = ["[tools]", ""]
+    tools = []
     if stack in ("typescript", "solidity", "mixed-ts-py"):
-        lines.append(f'node = "{NODE}"')
+        tools.append(f'node = "{NODE}"')
     if stack in ("python", "mixed-ts-py"):
-        lines.append(f'python = "{PY}"')
+        tools.append(f'python = "{PY}"')
     if stack == "rust":
-        lines.append(f'rust = "{RUST}"')
+        tools.append(f'rust = "{RUST}"')
     # Unity/C# and unknown: no mise-managed tools (Unity uses its own editor;
     # Azure Functions uses global dotnet). Leave tools empty.
-    if len(lines) == 2:
+    if tools:
+        lines.extend(tools)
+    else:
         lines.append("# no mise-managed tools for this stack (Unity/dotnet/C# use globals)")
     lines.append("")
     lines.append("[settings]")

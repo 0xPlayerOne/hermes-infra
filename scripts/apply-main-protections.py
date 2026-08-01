@@ -6,8 +6,6 @@ import subprocess
 
 from repo_registry import REPO_NAMES, REPO_REMOTES
 
-CWD = "/Users/amf/Developer/pink-binder"
-
 # Per-repo required CI checks (repo registry provides names + remotes).
 CHECKS = {
     "pink-binder": [
@@ -75,7 +73,6 @@ def apply_protection(repo, remote, checks):
         capture_output=True,
         text=True,
         timeout=30,
-        cwd=CWD,
     )
 
     if result.returncode == 0:
@@ -113,7 +110,6 @@ def apply_protection(repo, remote, checks):
         capture_output=True,
         text=True,
         timeout=30,
-        cwd=CWD,
     )
 
     if result2.returncode == 0:

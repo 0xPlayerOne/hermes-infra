@@ -66,3 +66,12 @@ def test_write_dependabot_prints_confirmation(standardize_module, tmp_path, caps
     standardize_module.write_dependabot("hermes-infra", standardize_module.HERMES_INFRA_DEPENDABOT)
     output = capsys.readouterr().out
     assert "hermes-infra: dependabot written" in output
+
+
+def test_write_file_shared_helper(standardize_module, tmp_path):
+    """write_file is the shared helper behind write_ci/write_dependabot."""
+    standardize_module.write_file(
+        "hermes-infra", ".github/custom.yml", "\nname: custom\n", "custom"
+    )
+    expected = tmp_path / "hermes-infra" / ".github" / "custom.yml"
+    assert expected.read_text(encoding="utf-8") == "name: custom\n"

@@ -33,7 +33,9 @@ def build_briefing(
     today = today or datetime.date.today()
     lines = [f"🔥 DAILY INTEL — {today.strftime('%B %d, %Y')}\n", "📦 GITHUB"]
     found = False
-    for repo in repos if user else []:
+    # Determine target repos: only query GitHub when a user is configured.
+    targets = repos if user else []
+    for repo in targets:
         spec = f"--repo {user}/{repo}"
         responses = (
             runner(f"gh issue list {spec} --assignee @me --state open --json title,url --limit 5"),

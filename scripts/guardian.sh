@@ -142,8 +142,6 @@ elif [[ "$CMD" =~ $PIP_RAW_RE ]]; then
   # strip the sentinel before executing (pip doesn't know it)
   CMD="${CMD/--allow-pip/}"
 fi
-# `uv pip install` / `uv pip3 install` / `uv tool install` are the sanctioned
-# path and are explicitly permitted (no sentinel needed).
 
 # ---------------------------------------------------------------------------
 # 2. PROTECTED PATHS — cannot be deleted/moved/formatted
