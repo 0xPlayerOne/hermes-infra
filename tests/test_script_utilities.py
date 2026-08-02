@@ -49,6 +49,14 @@ def test_watchdog_infra_health_uses_cortana(load_script, monkeypatch):
     ]
 
 
+def test_watchdog_infra_health_is_opt_in(load_script, monkeypatch):
+    module = load_script("scripts/agents_md_watchdog.py")
+    monkeypatch.delenv("WATCHDOG_INFRA_CHECKS", raising=False)
+    monkeypatch.setattr(module, "curl_ok", lambda _url: pytest.fail("network check ran"))
+
+    assert module.infra_health() == ("skipped", "skipped")
+
+
 def test_watchdog_main_reports_full_coverage(load_script, tmp_path, monkeypatch, capsys):
     module = load_script("scripts/agents_md_watchdog.py")
     repo = tmp_path / "repo"
