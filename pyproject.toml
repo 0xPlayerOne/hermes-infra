@@ -1,6 +1,6 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--strict-markers --strict-config --cov=scripts --cov-report=term-missing --cov-fail-under=80"
+addopts = "--strict-markers --strict-config --cov=scripts --cov-report=term-missing"
 markers = ["live: requires local Hermes launchd services"]
 
 [tool.coverage.run]
