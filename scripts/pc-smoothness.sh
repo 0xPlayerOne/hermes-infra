@@ -6,7 +6,9 @@
 # 1. Terminates ORPHANED HEADLESS BROWSER TEST TREES while protecting:
 #    active tests (playwright/puppeteer/cypress/...), Hermes, Pi, Codex,
 #    VSCode, games, Blender, Docker/WSL, and interactive browsers.
-# 2. Removes only STALE USER TEMP and CRASH files (nothing else).
+# 2. Removes only STALE USER TEMP and CRASH files, plus stale service-temp
+#    trees (git-worktree-aware: clean worktrees with merged/closed PRs and
+#    plain scratch dirs over a week old — never dirty or live-referenced).
 # 3. Audits CPU, memory, GPU temp/util, disk space, heavy processes.
 # 4. REPORTS further opportunities without applying unapproved changes.
 #
@@ -30,6 +32,11 @@ DRY_RUN=0
 [ "${1:-}" = "--dry-run" ] && DRY_RUN=1
 
 INFRA_DIR="${HERMES_INFRA_DIR:-$HOME/Developer/hermes-infra}"
+# HERMES_INFRA_DIR is exported as the LITERAL string '$HOME/...' in this
+# environment — expand it so logs land in the real repo, not a '$HOME' dir.
+case "$INFRA_DIR" in
+  \$HOME/*) INFRA_DIR="$HOME/${INFRA_DIR#\$HOME/}" ;;
+esac
 LOG_FILE="$INFRA_DIR/logs/pc-smoothness.log"
 mkdir -p "$INFRA_DIR/logs"
 
@@ -211,6 +218,128 @@ if [ -d "$CRASH_DIR" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Phase 2b — stale service-temp tree pruning (git-worktree-aware)
+# ---------------------------------------------------------------------------
+# The desktop asked for auto-pruning of stale service-temp trees: over a week
+# old, or sooner when verifiably dead (worktree branch merged/PR closed and
+# the checkout is clean). Safety rules, in order:
+#   1. NEVER touch a tree with any live process reference (lsof).
+#   2. NEVER touch a git worktree with uncommitted changes (dirty).
+#   3. `git worktree remove` only deletes the CHECKOUT — branch refs and all
+#      commits stay in the repo + origin, so a clean worktree costs nothing
+#      to prune even when its PR was closed-not-merged.
+#   4. Plain scratch dirs (no .git): prune only when older than TREE_AGE_DAYS.
+TREE_AGE_DAYS=7
+TREE_MIN_KB=10240          # only consider trees > 10 MB (matches report threshold)
+KEPT_TREES=""              # candidates that were reported but NOT pruned
+PRUNED_TREE_CNT=0
+
+is_worktree() {  # dir -> 0 if it's a registered git worktree
+  [ -f "$1/.git" ] && grep -q '^gitdir:' "$1/.git" 2>/dev/null
+}
+
+wt_repo() {  # worktree dir -> main repo path ("" if unparseable)
+  awk '/^gitdir:/{print $2}' "$1/.git" 2>/dev/null | sed 's#/.git/worktrees/.*##'
+}
+
+wt_branch() {  # worktree dir -> current branch ("" if detached)
+  git -C "$1" symbolic-ref --short HEAD 2>/dev/null
+}
+
+wt_dirty() {  # worktree dir -> number of modified/staged (non-untracked) lines
+  git -C "$1" status --porcelain 2>/dev/null | grep -v '^??' | wc -l | tr -d ' '
+}
+
+prune_tree() {  # path -> remove + accumulate totals
+  local d="$1"
+  local n sz repo
+  n=$(find "$d" -type f 2>/dev/null | wc -l | tr -d ' ')
+  [ -z "$n" ] && n=0
+  sz=$(du -sk "$d" 2>/dev/null | awk '{print $1}')
+  [ -z "$sz" ] && sz=0
+  FILES_REMOVED=$((FILES_REMOVED + n))
+  BYTES_REMOVED=$((BYTES_REMOVED + sz * 1024))
+  PRUNED_TREE_CNT=$((PRUNED_TREE_CNT + 1))
+  log "REMOVED stale service-temp tree: $d ($n files, $(human_bytes $((sz * 1024))))"
+  if [ "$DRY_RUN" -eq 0 ]; then
+    if is_worktree "$d"; then
+      # Clean removal for registered worktrees: unregisters admin metadata
+      # too (plain rm -rf leaves a stale .git/worktrees/<name> entry).
+      repo="$(wt_repo "$d")"
+      if [ -n "$repo" ] && ! git -C "$repo" worktree remove --force "$d" 2>/dev/null; then
+        rm -rf "$d" 2>/dev/null
+        git -C "$repo" worktree prune 2>/dev/null
+      fi
+    else
+      rm -rf "$d" 2>/dev/null
+    fi
+  fi
+}
+
+for d in /private/tmp/*; do
+  [ -d "$d" ] || continue
+  name="$(basename "$d")"
+  branch=""
+  sz="$(du -sk "$d" 2>/dev/null | awk '{print $1}')"
+  [ -z "$sz" ] && sz=0
+  refs="$(lsof +D "$d" 2>/dev/null | grep -v '^COMMAND' | wc -l | tr -d ' ')"
+  [ "${refs:-0}" -gt 0 ] && continue                      # live process -> never
+
+  age_days=$(( ($(date +%s) - $(stat -f '%m' "$d")) / 86400 ))
+  prune=0
+
+  if is_worktree "$d"; then
+    repo="$(wt_repo "$d")"
+    branch="$(wt_branch "$d")"
+    [ -n "$repo" ] || { KEPT_TREES="$KEPT_TREES $name(unresolved-repo)"; continue; }
+    [ "$(wt_dirty "$d")" -eq 0 ] || { KEPT_TREES="$KEPT_TREES $name(dirty)"; continue; }
+
+    if [ -n "$branch" ]; then
+      # Verified dead: branch merged into main/staging (ff/rebase merges) ...
+      if git -C "$repo" merge-base --is-ancestor "$branch" origin/main 2>/dev/null \
+         || git -C "$repo" merge-base --is-ancestor "$branch" origin/staging 2>/dev/null; then
+        prune=1
+      fi
+      # ... or gh reports the PR is merged (squash merges are not ancestors)
+      # or closed-not-merged while the branch is still on origin (superseded
+      # duplicate — the checkout is disposable; the branch ref survives).
+      # Check ALL PRs for the branch: a merged PR trumps a later-closed dup.
+      if [ "$prune" -eq 0 ] && command -v gh >/dev/null 2>&1; then
+        remote="$(git -C "$repo" remote get-url origin 2>/dev/null | sed -E 's#https?://github.com/##; s#\.git$##')"
+        if [ -n "$remote" ]; then
+          states="$(GH_CONNECT_TIMEOUT=5 gh pr list --repo "$remote" --head "$branch" \
+                    --state all --json state --jq '[.[].state] | join(",")' 2>/dev/null)"
+          case "$states" in
+            *MERGED*) prune=1 ;;
+            *CLOSED*)
+              if git -C "$repo" rev-parse --verify -q "origin/$branch" >/dev/null 2>&1; then
+                prune=1   # closed + pushed to origin: work preserved remotely
+              fi
+              ;;
+          esac
+        fi
+      fi
+    fi
+    # The desktop rule: anything over a week old is auto-prune material.
+    [ "$age_days" -ge "$TREE_AGE_DAYS" ] && prune=1
+  else
+    # Plain scratch dir: stale-age rule only, and only if > 10 MB (small
+    # scratch dirs are not worth the churn).
+    [ "${sz:-0}" -ge "$TREE_MIN_KB" ] && [ "$age_days" -ge "$TREE_AGE_DAYS" ] && prune=1
+  fi
+
+  if [ "$prune" -eq 1 ]; then
+    prune_tree "$d"
+  else
+    # Only report meaningful kept candidates (>10MB plain dirs, or any
+    # registered worktree — tiny scratch dirs are noise).
+    if is_worktree "$d" || [ "$sz" -ge "$TREE_MIN_KB" ]; then
+      KEPT_TREES="$KEPT_TREES $name(${branch:-detached},${age_days}d,sz=$(human_bytes $((sz * 1024))))"
+    fi
+  fi
+done
+
+# ---------------------------------------------------------------------------
 # Phase 3 — audit snapshot
 # ---------------------------------------------------------------------------
 # CPU busy% + disk0 tps from iostat (2 samples, use the last).
@@ -282,24 +411,10 @@ done
 [ -n "$STALE_TESTS" ] && \
   OPPS+=("Stale test-runner session(s) idle >24h:$STALE_TESTS — restart if unused (not killed automatically).")
 
-# Stale service-named temp trees (>10MB, not referenced by any live process).
-# Excluded from auto-delete for safety — REPORT as manual-cleanup candidates.
-STALE_TREES=""
-for d in /private/tmp/*; do
-  [ -d "$d" ] || continue
-  name="$(basename "$d")"
-  case "$name" in
-    *hermes*|*gateway*|*cortana*|*pi-*|*playwright*|*puppeteer*)
-      refs="$(lsof +d "$d" 2>/dev/null | wc -l | tr -d ' ')"
-      [ "${refs:-0}" -gt 0 ] && continue
-      sz="$(du -sk "$d" 2>/dev/null | awk '{print $1}')"
-      [ "${sz:-0}" -lt 10240 ] && continue   # only >10 MB
-      STALE_TREES="$STALE_TREES /private/tmp/$name ($(human_bytes $((sz*1024))))"
-      ;;
-  esac
-done
-[ -n "$STALE_TREES" ] && \
-  OPPS+=("Stale service-temp tree(s) — excluded from auto-delete, safe to remove manually:$STALE_TREES")
+# Stale service-temp trees that Phase 2b decided to KEEP (verified or too
+# fresh). Phase 2b prunes the verifiably-dead ones; these still need eyes.
+[ -n "$KEPT_TREES" ] && \
+  OPPS+=("Service-temp tree(s) kept (not yet auto-prunable):$KEPT_TREES")
 
 # ---------------------------------------------------------------------------
 # Summary
@@ -312,6 +427,7 @@ else
 fi
 
 SUMMARY="PC Smoothness cleanup removed ${FILES_REMOVED} stale files, recovering about ${FREED}. Current snapshot: CPU ${CPU_BUSY:-?}%, memory ${MEM_USED}%, GPU ${GPU_TEMP}, disk ${DISK_STATE}, and ${ORPHAN_MSG}."
+[ "$PRUNED_TREE_CNT" -gt 0 ] && SUMMARY="$SUMMARY Pruned ${PRUNED_TREE_CNT} stale service-temp tree(s)."
 
 echo "$SUMMARY"
 for o in "${OPPS[@]}"; do echo "  ⚠ $o"; done
