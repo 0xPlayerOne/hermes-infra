@@ -35,8 +35,18 @@ mkdir -p "$INFRA_DIR/logs"
 
 LOCK_DIR="/tmp/pc-smoothness.lock"
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-  echo "PC Smoothness: another instance is already running — skipping this hour."
-  exit 0
+  # Stale-lock recovery: if the lock is older than an hour, steal it
+  # (a SIGKILLed run can never run the EXIT trap).
+  if [ -d "$LOCK_DIR" ] && [ -n "$(find "$LOCK_DIR" -maxdepth 0 -mmin +60 2>/dev/null)" ]; then
+    rmdir "$LOCK_DIR" 2>/dev/null
+    mkdir "$LOCK_DIR" 2>/dev/null || {
+      echo "PC Smoothness: lock busy — skipping this hour."
+      exit 0
+    }
+  else
+    echo "PC Smoothness: another instance is already running — skipping this hour."
+    exit 0
+  fi
 fi
 PS_TABLE="$(mktemp /tmp/pc-smoothness.ps.XXXXXX)"
 trap 'rm -f "$PS_TABLE"; rmdir "$LOCK_DIR" 2>/dev/null' EXIT
