@@ -123,7 +123,7 @@ is_launchd_job() {
 ps -axo pid=,ppid=,etime=,command= > "$PS_TABLE" 2>/dev/null
 
 CANDIDATES=""     # space-separated pids of headless browser processes
-while read -r pid ppid etime cmd; do
+while read -r pid _ etime cmd; do
   [ -z "$pid" ] && continue
   if is_headless_browser "$cmd"; then
     CANDIDATES="$CANDIDATES $pid"
@@ -270,11 +270,15 @@ if [ -n "$ORPHANS_NOFP" ]; then
 fi
 # Stale test-runner sessions (protected, but worth flagging if idle >24h)
 STALE_TESTS=""
-while read -r pid etime cmd; do
+for pid in $(pgrep -f 'playwright|puppeteer|chromedriver' 2>/dev/null); do
   [ -z "$pid" ] && continue
+  info="$(ps -o etime=,command= -p "$pid" 2>/dev/null | head -1)"
+  [ -z "$info" ] && continue
+  etime="$(echo "$info" | awk '{print $1}')"
+  cmd="$(echo "$info" | sed -E 's/^[^ ]+ +//')"
   a="$(age_seconds "$etime")"
   [ "$a" -ge 86400 ] && STALE_TESTS="$STALE_TESTS pid=$pid($(echo "$cmd" | awk '{print $1}' | sed 's#.*/##') ${etime})"
-done < <(ps -axo pid=,etime=,command= 2>/dev/null | grep -iE 'playwright|puppeteer|chromedriver' | grep -v grep)
+done
 [ -n "$STALE_TESTS" ] && \
   OPPS+=("Stale test-runner session(s) idle >24h:$STALE_TESTS — restart if unused (not killed automatically).")
 
