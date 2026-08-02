@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.2.1](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.0...hermes-infra-v0.2.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* drop empty uv.lock that broke CI dev-deps install ([ea6f3c5](https://github.com/0xPlayerOne/hermes-infra/commit/ea6f3c51e4dd03608719377c53aa6bbc2619066c))
+
+
+### Tests
+
+* split and expand coverage ([#55](https://github.com/0xPlayerOne/hermes-infra/issues/55)) ([ab19f69](https://github.com/0xPlayerOne/hermes-infra/commit/ab19f690b88057cfd862f38afdcbaae9cd97da56))
+
+
+### Maintenance
+
+* auto-sync local changes ([ed5cce4](https://github.com/0xPlayerOne/hermes-infra/commit/ed5cce46cf8eddb04d1f0a9592bbb384e31447e0))
+* **deps:** update Python and Rust tooling ([#54](https://github.com/0xPlayerOne/hermes-infra/issues/54)) ([5639594](https://github.com/0xPlayerOne/hermes-infra/commit/5639594c2f7972951e2a4cdcbd7528db0c11f472))
+* **scripts:** dedupe CI writers, drop machine-specific paths, fix dead data ([#51](https://github.com/0xPlayerOne/hermes-infra/issues/51)) ([8c7036a](https://github.com/0xPlayerOne/hermes-infra/commit/8c7036af06aa7a44a0dec6b8bb796bd5b5dd91f8))
+
 ## [0.2.0](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.1.0...hermes-infra-v0.2.0) (2026-08-01)
 
 
