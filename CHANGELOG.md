@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.2](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.1...hermes-infra-v0.2.2) (2026-08-02)
+
+
+### Maintenance
+
+* **ci:** promote Code Foundry v0.34.9 to main ([1bc8c4b](https://github.com/0xPlayerOne/hermes-infra/commit/1bc8c4b8fe20d49ae046efb667901de204f92f45))
+* **ci:** use Code Foundry v0.34.11 on main ([#70](https://github.com/0xPlayerOne/hermes-infra/issues/70)) ([eec5550](https://github.com/0xPlayerOne/hermes-infra/commit/eec55508cf6cb87a279f6c8b8e29db1f7b46778c))
+
 ## [0.2.1](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.0...hermes-infra-v0.2.1) (2026-08-02)
 
 
