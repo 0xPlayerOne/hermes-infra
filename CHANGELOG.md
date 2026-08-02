@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.2...hermes-infra-v0.2.3) (2026-08-02)
+
+
+### Bug Fixes
+
+* **ci:** use Code Foundry v0.34.12 ([#74](https://github.com/0xPlayerOne/hermes-infra/issues/74)) ([b4462e9](https://github.com/0xPlayerOne/hermes-infra/commit/b4462e91288b4606c22dec9ce5499014e017dc10))
+
 ## [0.2.2](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.1...hermes-infra-v0.2.2) (2026-08-02)
 
 
