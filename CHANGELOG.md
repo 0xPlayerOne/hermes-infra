@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.4...hermes-infra-v0.2.5) (2026-08-03)
+
+
+### Maintenance
+
+* **ci:** align Code Foundry release policy ([#80](https://github.com/0xPlayerOne/hermes-infra/issues/80)) ([86528aa](https://github.com/0xPlayerOne/hermes-infra/commit/86528aa36f64299fbd611857111c6298100ea031))
+
 ## [0.2.4](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.3...hermes-infra-v0.2.4) (2026-08-03)
 
 
