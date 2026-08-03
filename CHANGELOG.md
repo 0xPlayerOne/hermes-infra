@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.3...hermes-infra-v0.2.4) (2026-08-03)
+
+
+### Maintenance
+
+* **staging:** align branch with main ([1dcfa34](https://github.com/0xPlayerOne/hermes-infra/commit/1dcfa3460f809e9e7e6b3c70d18a7ef77f520e62))
+
 ## [0.2.3](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.2...hermes-infra-v0.2.3) (2026-08-02)
 
 
