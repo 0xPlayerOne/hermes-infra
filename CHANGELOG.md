@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.9](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.8...hermes-infra-v0.2.9) (2026-08-07)
+
+
+### Maintenance
+
+* extract shared gh api helper + fix unitypackage detection ([c19b997](https://github.com/0xPlayerOne/hermes-infra/commit/c19b9971aee41928e7bd7152c69187487e505b4f))
+
 ## [0.2.8](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.7...hermes-infra-v0.2.8) (2026-08-07)
 
 
