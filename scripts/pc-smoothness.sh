@@ -369,7 +369,7 @@ fi
 if [ -n "$PM_CMD" ]; then
   PM_OUT="$(eval "$PM_CMD --samplers gpu_power -n 1 -i 500" 2>/dev/null)"
   GPU_TEMP="$(echo "$PM_OUT" | grep -iE 'GPU die temperature' | tail -1 | awk '{printf "%d", $4}')"
-  GPU_BUSY="$(echo "$PM_OUT" | grep -iE 'GPU .*residency' | tail -1 | awk '{for(i=1;i<=NF;i++) if($i ~ /^[0-9.]+%$/) {printf "%d", $i; exit}}')"
+  GPU_BUSY="$(echo "$PM_OUT" | grep -iE 'GPU busy residency|GPU busy' | tail -1 | awk '{for(i=1;i<=NF;i++) if($i ~ /^[0-9.]+%$/) {printf "%d", $i; exit}}')"
   if [ -n "$GPU_TEMP" ]; then GPU_TEMP="${GPU_TEMP}C"; else GPU_TEMP="n/a"; fi
   [ -n "$GPU_BUSY" ] || GPU_BUSY="n/a"
 fi
