@@ -359,9 +359,9 @@ if command -v powermetrics >/dev/null 2>&1; then
   if sudo -n true 2>/dev/null; then
     PM_CMD="sudo -n powermetrics"
   else
-    PW="$(grep '^SUDO_PASSWORD=' "$HOME/.hermes/.env" 2>/dev/null | cut -d= -f2- | tr -d ' ')"
-    # only use it if it looks like a real password (not a whitespace placeholder)
-    if [ -n "${PW:-}" ] && [ "${#PW}" -ge 8 ] && ! printf '%s' "$PW" | grep -qE '^ +$'; then
+    PW="$(grep '^SUDO_PASSWORD=' "$HOME/.hermes/.env" 2>/dev/null | cut -d= -f2-)"
+    # use whatever password is in the env — it may legitimately contain spaces
+    if [ -n "${PW:-}" ]; then
       PM_CMD="echo \"$PW\" | sudo -S powermetrics"
     fi
   fi
@@ -369,7 +369,7 @@ fi
 if [ -n "$PM_CMD" ]; then
   PM_OUT="$(eval "$PM_CMD --samplers gpu_power -n 1 -i 500" 2>/dev/null)"
   GPU_TEMP="$(echo "$PM_OUT" | grep -iE 'GPU die temperature' | tail -1 | awk '{printf "%d", $4}')"
-  GPU_BUSY="$(echo "$PM_OUT" | grep -iE 'GPU busy residency|GPU busy' | tail -1 | awk '{printf "%d", $NF}')"
+  GPU_BUSY="$(echo "$PM_OUT" | grep -iE 'GPU .*residency' | tail -1 | awk '{for(i=1;i<=NF;i++) if($i ~ /^[0-9.]+%$/) {printf "%d", $i; exit}}')"
   if [ -n "$GPU_TEMP" ]; then GPU_TEMP="${GPU_TEMP}C"; else GPU_TEMP="n/a"; fi
   [ -n "$GPU_BUSY" ] || GPU_BUSY="n/a"
 fi
@@ -392,8 +392,13 @@ OPPS=()
   OPPS+=("Memory at ${MEM_USED}% — consider closing heavy apps.")
 [ "${CPU_BUSY:-0}" -ge "$CPU_WARN_PCT" ] && \
   OPPS+=("CPU at ${CPU_BUSY}% — sustained load detected.")
-[ "$GPU_TEMP" = "n/a" ] && \
-  OPPS+=("GPU temp not sampled: powermetrics needs root — set a real SUDO_PASSWORD in ~/.hermes/.env (currently a placeholder) or add a NOPASSWD sudoers rule for powermetrics.")
+if [ "$GPU_TEMP" = "n/a" ]; then
+  if [ -z "$PM_CMD" ]; then
+    OPPS+=("GPU temp not sampled: powermetrics needs root — set a real SUDO_PASSWORD in ~/.hermes/.env or add a NOPASSWD sudoers rule for powermetrics.")
+  else
+    OPPS+=("GPU die temperature not exposed by this Mac's powermetrics (hardware/OS limit); GPU busy sampled.")
+  fi
+fi
 if [ -n "$ORPHANS_NOFP" ]; then
   OPPS+=("Found orphaned headless browser(s) without test fingerprints — left untouched (manual review:$ORPHANS_NOFP).")
 fi
