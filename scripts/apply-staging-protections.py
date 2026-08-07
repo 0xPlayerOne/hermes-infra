@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Apply staging branch protections to all repos."""
 
-import json
-import subprocess
 import sys
 
+from github_api import gh_api_put
 from repo_registry import REPO_NAMES, REPO_REMOTES
 
 REPOS = [(name, REPO_REMOTES[name]) for name in REPO_NAMES]
@@ -32,21 +31,9 @@ PAYLOAD = {
 def main() -> int:
     for name, remote in REPOS:
         print(f"\n--- {name} ({remote}) ---")
-        r = subprocess.run(
-            [
-                "gh",
-                "api",
-                f"repos/{remote}/branches/staging/protection",
-                "--method",
-                "PUT",
-                "-H",
-                "Content-Type: application/json",
-                "-f",
-                f"payload={json.dumps(PAYLOAD)}",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=30,
+        r = gh_api_put(
+            f"repos/{remote}/branches/staging/protection",
+            PAYLOAD,
         )
         if r.returncode == 0:
             print("  ✅ Staging protection applied")

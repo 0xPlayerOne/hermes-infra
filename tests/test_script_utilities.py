@@ -247,3 +247,43 @@ def test_agents_gen_bad_args(load_script, monkeypatch, argv):
     monkeypatch.setattr(sys, "stdin", io.StringIO("body"))
     with pytest.raises(SystemExit):
         module.main()
+
+
+def test_github_api_put_builds_gh_call(load_script, monkeypatch):
+    import subprocess
+
+    module = load_script("scripts/github_api.py")
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        result = subprocess.CompletedProcess(cmd, 0, "ok", "")
+        return result
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    result = module.gh_api_put("repos/owner/repo/branches/main/protection", {"strict": True})
+    assert result.returncode == 0
+    assert len(calls) == 1
+    assert calls[0][0] == [
+        "gh",
+        "api",
+        "repos/owner/repo/branches/main/protection",
+        "--method",
+        "PUT",
+        "-H",
+        "Content-Type: application/json",
+        "-f",
+        'payload={"strict": true}',
+    ]
+    assert calls[0][1]["capture_output"] is True
+    assert calls[0][1]["text"] is True
+    assert calls[0][1]["timeout"] == 30
+
+
+def test_stack_detect_unitypackage_does_not_count_as_cs(load_script, tmp_path):
+    module = load_script("scripts/stack_detect.py")
+    touch(tmp_path / "pkg.unitypackage")
+    sig = module.detect_signals(tmp_path)
+    assert sig["cs"] == 0
+    assert sig["unity"] is False
+    assert module.primary_lang(sig) == "unknown"
