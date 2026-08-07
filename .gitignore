@@ -26,9 +26,6 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
-# uv project lockfile — not used: Python deps are pinned via requirements-dev.txt
-# (an empty uv.lock makes code-foundry run `uv sync --frozen` and skip dev deps)
-uv.lock
 
 # Rust
 target/
