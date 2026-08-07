@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """Apply hardened main branch protections to all 9 repos using REST API."""
 
-import json
-import subprocess
-
+from github_api import gh_api_put
 from repo_registry import REPO_NAMES, REPO_REMOTES
 
 # Per-repo required CI checks (repo registry provides names + remotes).
@@ -58,21 +56,9 @@ def apply_protection(repo, remote, checks):
         "restrictions": None,
     }
 
-    result = subprocess.run(
-        [
-            "gh",
-            "api",
-            f"repos/{remote}/branches/main/protection",
-            "--method",
-            "PUT",
-            "-H",
-            "Content-Type: application/json",
-            "-f",
-            f"payload={json.dumps(payload)}",
-        ],
-        capture_output=True,
-        text=True,
-        timeout=30,
+    result = gh_api_put(
+        f"repos/{remote}/branches/main/protection",
+        payload,
     )
 
     if result.returncode == 0:
@@ -95,21 +81,9 @@ def apply_protection(repo, remote, checks):
         }
     }
 
-    result2 = subprocess.run(
-        [
-            "gh",
-            "api",
-            f"repos/{remote}/merge-queue",
-            "--method",
-            "PUT",
-            "-H",
-            "Content-Type: application/json",
-            "-f",
-            f"payload={json.dumps(mq_payload)}",
-        ],
-        capture_output=True,
-        text=True,
-        timeout=30,
+    result2 = gh_api_put(
+        f"repos/{remote}/merge-queue",
+        mq_payload,
     )
 
     if result2.returncode == 0:
