@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.2.7](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.6...hermes-infra-v0.2.7) (2026-08-07)
+
+
+### Bug Fixes
+
+* **dependabot:** remove npm ecosystem from Dependabot config ([32c2972](https://github.com/0xPlayerOne/hermes-infra/commit/32c2972ba6e973073a0f1f9f9f43138871e6b3a0))
+
+
+### Tests
+
+* add full coverage for harden-daily-review-prompts ([5b28217](https://github.com/0xPlayerOne/hermes-infra/commit/5b28217b751caaf0721050553778c3685590badd))
+
+
+### Maintenance
+
+* sync staging-relevant changes from main ([7281a4b](https://github.com/0xPlayerOne/hermes-infra/commit/7281a4bd832bc1a52c292a06a974414cbcdb7253))
+
 ## [0.2.6](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.5...hermes-infra-v0.2.6) (2026-08-07)
 
 
