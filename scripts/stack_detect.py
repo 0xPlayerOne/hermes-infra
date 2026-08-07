@@ -75,7 +75,7 @@ def detect_signals(path: Path) -> dict:
                 sig["npm_lock"] = True
             elif p == "uv.lock":
                 sig["uv"] = True
-            elif p.endswith(".csproj") or p.endswith(".unitypackage"):
+            elif p.endswith(".csproj"):
                 sig["cs"] += 1
     return sig
 
