@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.6](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.5...hermes-infra-v0.2.6) (2026-08-07)
+
+
+### Bug Fixes
+
+* restore uv.lock ignore dropped by sync baseline merge ([c327283](https://github.com/0xPlayerOne/hermes-infra/commit/c327283bebd2fd21266c42fbe8d3d1cacb4e1f13))
+
+
+### Maintenance
+
+* **code-foundry:** flip to direct main workflow, pin runtime v0.36.0 ([ca1ae29](https://github.com/0xPlayerOne/hermes-infra/commit/ca1ae29c4a41e503d7e2dc9f1f985425492303f2))
+
 ## [0.2.5](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.4...hermes-infra-v0.2.5) (2026-08-03)
 
 
