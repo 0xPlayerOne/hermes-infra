@@ -11,17 +11,6 @@ updates:
       github-actions:
         applies-to: version-updates
         patterns: ['*']
-  - package-ecosystem: npm
-    directory: /
-    target-branch: staging
-    schedule:
-      interval: weekly
-      day: sunday
-    open-pull-requests-limit: 99
-    groups:
-      npm-dependencies:
-        applies-to: version-updates
-        patterns: ['*']
   - package-ecosystem: cargo
     directory: /
     target-branch: staging
