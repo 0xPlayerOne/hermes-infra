@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.8](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.7...hermes-infra-v0.2.8) (2026-08-07)
+
+
+### Maintenance
+
+* **code-foundry:** pin runtime v0.36.1 ([f239e8a](https://github.com/0xPlayerOne/hermes-infra/commit/f239e8a22c5dc9d0d28727be6deda159a3cb86fa))
+
 ## [0.2.7](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.6...hermes-infra-v0.2.7) (2026-08-07)
 
 
