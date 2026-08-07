@@ -4,13 +4,10 @@ Harden all Daily Review cron prompts with explicit phase-based workflow.
 """
 
 import json
+import sys
+from pathlib import Path
 
 JOBS_FILE = "/Users/amf/.hermes/profiles/intern/cron/jobs.json"
-
-with open(JOBS_FILE, encoding="utf-8") as f:
-    data = json.load(f)
-
-jobs = data["jobs"] if isinstance(data, dict) and "jobs" in data else data
 
 # Per-repo info: remote, test command hints
 REPO_INFO = {
@@ -119,19 +116,45 @@ PHASE 4: PR <#s> opened | already-exists | none-needed
 STAGING AHEAD OF MAIN: <Y commits> | behind: <N commits>
 ALL PHASES: complete | stuck-at-phase-<N>
 """
-UPDATED = 0
-for job in jobs:
-    if isinstance(job, dict) and "Daily Review" in job.get("name", ""):
+
+
+def harden_jobs(jobs):
+    """Update Daily Review jobs in-place. Returns count of updated jobs."""
+    updated = 0
+    for job in jobs:
+        if not isinstance(job, dict):
+            continue
+        if "Daily Review" not in job.get("name", ""):
+            continue
+        prompt = job.get("prompt", "")
+        if prompt.startswith("You are a daily code reviewer for"):
+            continue
         name = job["name"]
         repo_name = name.split(" - ", 1)[1] if " - " in name else name
         remote, test_cmd = REPO_INFO.get(repo_name, ("unknown/repo", "bun test"))
-
-        prompt = HARDENED_PROMPT.format(remote=remote, test_cmd=test_cmd)
-        job["prompt"] = prompt
-        UPDATED += 1
+        job["prompt"] = HARDENED_PROMPT.format(remote=remote, test_cmd=test_cmd)
+        updated += 1
         print(f"  ✓ {name}")
+    return updated
 
-with open(JOBS_FILE, "w", encoding="utf-8") as f:
-    json.dump(data, f, indent=2)
 
-print(f"\n✅ {UPDATED} Daily Review jobs updated")
+def main():
+    jobs_file = Path(JOBS_FILE)
+    if not jobs_file.exists():
+        print(f"Jobs file not found: {jobs_file}", file=sys.stderr)
+        sys.exit(1)
+
+    with open(jobs_file, encoding="utf-8") as f:
+        data = json.load(f)
+
+    jobs = data["jobs"] if isinstance(data, dict) and "jobs" in data else data
+    count = harden_jobs(jobs)
+
+    with open(jobs_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+    print(f"\n✅ {count} Daily Review jobs updated")
+
+
+if __name__ == "__main__":
+    main()
