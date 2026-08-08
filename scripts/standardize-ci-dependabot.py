@@ -149,13 +149,23 @@ jobs:
         run: bunx hardhat run --no-compile --network hardhat src/scripts/deploy_test.ts
 """
 
+
 # ============================================================
 # STANDARD DEPENDABOT CONFIG for npm/bun repos
 # ============================================================
 # The key pattern: production deps grouped with minor/patch only
 # Major production bumps get individual PRs (CI catches failures)
 # Dev deps grouped together
-NPM_DEPENDABOT = """version: 2
+def npm_dependabot(labels: bool = False) -> str:
+    """Return the standard npm dependabot config.
+
+    *labels* adds the ``dependencies`` / ``ci`` label sets used by
+    nifty-smart-contracts. The two historical templates differed only
+    by these labels, so they share one builder.
+    """
+    npm_labels = "    labels:\n      - dependencies\n" if labels else ""
+    ga_labels = "    labels:\n      - dependencies\n      - ci\n" if labels else ""
+    return f"""version: 2
 updates:
   - package-ecosystem: npm
     directory: /
@@ -164,7 +174,7 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 10
-    groups:
+{npm_labels}    groups:
       production-dependencies:
         dependency-type: production
         update-types:
@@ -180,40 +190,12 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
-"""
+{ga_labels}"""
 
-# nifty-smart-contracts - same npm pattern
-NPM_SC_DEPENDABOT = """version: 2
-updates:
-  - package-ecosystem: npm
-    directory: /
-    target-branch: staging
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 10
-    labels:
-      - dependencies
-    groups:
-      production-dependencies:
-        dependency-type: production
-        update-types:
-          - patch
-          - minor
-      development-dependencies:
-        dependency-type: development
 
-  - package-ecosystem: github-actions
-    directory: /
-    target-branch: staging
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - ci
-"""
+NPM_DEPENDABOT = npm_dependabot(labels=False)
+# nifty-smart-contracts - same npm pattern, plus dependency labels
+NPM_SC_DEPENDABOT = npm_dependabot(labels=True)
 
 # PlayFabConfigs uses bun ecosystem
 BUN_DEPENDABOT = """version: 2
