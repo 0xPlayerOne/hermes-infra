@@ -182,7 +182,7 @@ if [[ "$CMD" =~ rm[[:space:]]+-[a-zA-Z]*[rf][a-zA-Z]*[[:space:]]+\\\$?[A-Za-z_]+
 fi
 
 # ---------------------------------------------------------------------------
-# 4. DESTRUCTIve-BUT-ALLOWED — snapshot first, then confirm
+# 4. DESTRUCTIVE-BUT-ALLOWED — snapshot first, then confirm
 # ---------------------------------------------------------------------------
 DESTRUCTIVE=0
 if [[ "$CMD" =~ (^|[^a-zA-Z])(rm|rmdir|mv|trash|del|purge)([^a-zA-Z]|$) ]]; then

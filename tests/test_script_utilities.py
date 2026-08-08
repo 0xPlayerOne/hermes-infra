@@ -127,6 +127,17 @@ def test_repo_standardize_solidity_template_picks_tool(load_script):
     assert "- **Toolchain:** Hardhat" in text
 
 
+def test_repo_standardize_accepts_partial_signals(load_script):
+    """agents_md tolerates sparse signal dicts (defensive .get access)."""
+    module = load_script("scripts/repo_standardize.py")
+    text = module.agents_md("typescript", {"bun_lock": True}, "fixture")
+    assert "- **Package manager:** bun" in text
+    text = module.agents_md("python", {"uv": True}, "fixture")
+    assert "- **Package manager:** uv" in text
+    text = module.agents_md("solidity", {}, "fixture")
+    assert "- **Toolchain:** Hardhat" in text
+
+
 def test_repo_standardize_templates(load_script):
     module = load_script("scripts/repo_standardize.py")
     stacks = ["rust", "typescript", "python", "solidity", "unity-cs", "mixed-ts-py", "unknown"]
