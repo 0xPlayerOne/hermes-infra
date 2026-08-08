@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.11](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.10...hermes-infra-v0.2.11) (2026-08-08)
+
+
+### Maintenance
+
+* **code-foundry:** sync protected docs to v0.37.1 ([5e34f6a](https://github.com/0xPlayerOne/hermes-infra/commit/5e34f6a85cfb8c2535d95635e8bb464e61bc1000))
+
 ## [0.2.10](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.9...hermes-infra-v0.2.10) (2026-08-07)
 
 
