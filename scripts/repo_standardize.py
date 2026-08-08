@@ -36,7 +36,7 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 
 """
     if lang == "solidity":
-        tool = "Foundry (forge)" if sig["sol_tool"] == "foundry.toml" else "Hardhat"
+        tool = "Foundry (forge)" if sig.get("sol_tool") == "foundry.toml" else "Hardhat"
         return (
             header
             + f"""## Stack
@@ -80,7 +80,7 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
     if lang == "typescript":
         pm = (
             "bun"
-            if (sig["bun_lock"] or not sig["npm_lock"])
+            if (sig.get("bun_lock") or not sig.get("npm_lock"))
             else "bun (npm lock present — migrate to bun)"
         )
         return (
@@ -105,7 +105,7 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 """
         )
     if lang == "python":
-        pm = "uv" if sig["uv"] else "uv (NO pip — migrate lockfile to uv)"
+        pm = "uv" if sig.get("uv") else "uv (NO pip — migrate lockfile to uv)"
         return (
             header
             + f"""## Stack

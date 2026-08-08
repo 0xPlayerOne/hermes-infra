@@ -61,6 +61,23 @@ def test_module_constants(load_script):
         assert _tid in module.REPO_TO_THREAD.values()
 
 
+def test_home_relative_handles_ci_home(load_script, monkeypatch):
+    """_home_relative keeps ~/Developer/ display format on CI runners.
+
+    Registry paths are absolute /Users/<operator>/...; on CI (HOME differs)
+    they must still render as ~/Developer/... so downstream formatting and
+    tests stay stable.
+    """
+    module = load_script("scripts/send-thread-directive.py")
+    monkeypatch.setenv("HOME", "/home/runner")
+    assert module._home_relative("/Users/amf/Developer/pink-binder") == "~/Developer/pink-binder"
+    assert (
+        module._home_relative("/Users/amf/Developer/NiftyLeague/nifty-fe-monorepo")
+        == "~/Developer/NiftyLeague/nifty-fe-monorepo"
+    )
+    assert module._home_relative("/opt/other/path") == "/opt/other/path"
+
+
 def test_repo_to_thread_mapping(load_script):
     """Verify REPO_TO_THREAD maps short names correctly."""
     module = load_script("scripts/send-thread-directive.py")

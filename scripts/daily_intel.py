@@ -60,7 +60,7 @@ def build_briefing(
 
     lines.append("\n📚 ARXIV (fresh)")
     url = (
-        "http://export.arxiv.org/api/query?search_query="
+        "https://export.arxiv.org/api/query?search_query="
         f"{arxiv_categories}&sortBy=submittedDate&max_results=6&sortOrder=descending"
     )
     try:

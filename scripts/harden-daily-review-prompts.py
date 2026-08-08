@@ -7,26 +7,26 @@ import json
 import sys
 from pathlib import Path
 
+from repo_registry import REPO_REMOTES
+
 JOBS_FILE = "/Users/amf/.hermes/profiles/intern/cron/jobs.json"
 
-# Per-repo info: remote, test command hints
-REPO_INFO = {
-    "pink-binder": ("0xPlayerOne/pink-binder", "bun test --coverage --isolate"),
-    "v0-portfolio": ("0xPlayerOne/v0-portfolio", "bun test --dom --isolate"),
-    "nifty-contracts-api": ("NiftyLeague/nifty-contracts-api", "bun run test"),
-    "nifty-fe-monorepo": ("NiftyLeague/nifty-fe-monorepo", "bun test --isolate"),
-    "nifty-league-subgraph": ("NiftyLeague/nifty-league-subgraph", "bun test bun-tests"),
-    "nifty-smart-contracts": (
-        "NiftyLeague/nifty-smart-contracts",
-        "bun run test && bun run test:hardhat",
-    ),
-    "PlayFabConfigs": ("NiftyLeague/PlayFabConfigs", "bun test"),
-    "hermes-infra": (
-        "0xPlayerOne/hermes-infra",
-        "cargo test && .venv/bin/python -m pytest -q --cov",
-    ),
-    "model-gateway": ("0xPlayerOne/model-gateway", "cargo test --all-features"),
+# Per-repo test command hints. The canonical remote (org/repo) comes from
+# repo_registry.py so it cannot drift from apply-*/standardize scripts.
+TEST_COMMANDS = {
+    "pink-binder": "bun test --coverage --isolate",
+    "v0-portfolio": "bun test --dom --isolate",
+    "nifty-contracts-api": "bun run test",
+    "nifty-fe-monorepo": "bun test --isolate",
+    "nifty-league-subgraph": "bun test bun-tests",
+    "nifty-smart-contracts": "bun run test && bun run test:hardhat",
+    "PlayFabConfigs": "bun test",
+    "hermes-infra": "cargo test && .venv/bin/python -m pytest -q --cov",
+    "model-gateway": "cargo test --all-features",
 }
+
+# Repo short-name -> (remote, test command)
+REPO_INFO = {name: (REPO_REMOTES[name], cmd) for name, cmd in TEST_COMMANDS.items()}
 
 HARDENED_PROMPT = """You are a daily code reviewer for {remote}. Your mission: execute ALL 4 phases below in order. Do NOT stop until Phase 4 is complete.
 

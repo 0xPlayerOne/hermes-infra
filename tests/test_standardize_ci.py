@@ -75,3 +75,11 @@ def test_write_file_shared_helper(standardize_module, tmp_path):
     )
     expected = tmp_path / "hermes-infra" / ".github" / "custom.yml"
     assert expected.read_text(encoding="utf-8") == "name: custom\n"
+
+
+def test_npm_dependabot_builder_matches_constants(standardize_module):
+    """The parametrized builder reproduces both historical templates exactly."""
+    assert standardize_module.npm_dependabot(labels=False) == standardize_module.NPM_DEPENDABOT
+    assert standardize_module.npm_dependabot(labels=True) == standardize_module.NPM_SC_DEPENDABOT
+    assert "labels" not in standardize_module.NPM_DEPENDABOT
+    assert "      - ci" in standardize_module.NPM_SC_DEPENDABOT
