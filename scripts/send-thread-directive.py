@@ -47,9 +47,20 @@ THREAD_IDS = {
 
 
 def _home_relative(path: str) -> str:
-    """Render an absolute local path as ~-relative for display."""
+    """Render an absolute local path as ~-relative for display.
+
+    Registry paths are absolute on the operator machine (``/Users/<name>/...``).
+    When the current user's home differs (e.g. CI runners where HOME is
+    ``/home/runner``), still render the operator path as ``~/...`` so the
+    display format stays stable.
+    """
     home = str(Path.home())
-    return "~" + path[len(home) :] if path.startswith(home) else path
+    if path.startswith(home):
+        return "~" + path[len(home) :]
+    parts = path.split("/")
+    if len(parts) > 3 and parts[1] == "Users":
+        return "~/" + "/".join(parts[3:])
+    return path
 
 
 # Thread ID -> (org/name, local_path)
