@@ -117,12 +117,19 @@ def update_jobs(jobs, *, out=None):
     return count
 
 
+def _resolve_jobs_file(argv):
+    """Return the jobs file path from argv, defaulting to DEFAULT_JOBS_FILE."""
+    if "--jobs-file" not in argv:
+        return DEFAULT_JOBS_FILE
+    flag = argv.index("--jobs-file")
+    if flag + 1 >= len(argv):
+        print("ERROR: --jobs-file requires a path argument", file=sys.stderr)
+        sys.exit(1)
+    return Path(argv[flag + 1])
+
+
 def main():
-    jobs_file = (
-        Path(sys.argv[sys.argv.index("--jobs-file") + 1])
-        if "--jobs-file" in sys.argv
-        else DEFAULT_JOBS_FILE
-    )
+    jobs_file = _resolve_jobs_file(sys.argv)
 
     if not jobs_file.exists():
         print(f"Jobs file not found: {jobs_file}")
@@ -132,7 +139,14 @@ def main():
         data = json.load(f)
 
     jobs = data["jobs"] if isinstance(data, dict) and "jobs" in data else data
-    count = update_jobs(jobs, out=jobs_file)
+    count = update_jobs(jobs)
+
+    # Write back the ORIGINAL top-level structure. The real jobs file is
+    # wrapped in {"jobs": [...], "updated_at": ...}; dumping the bare list
+    # would destroy that wrapper (matching harden-daily-review-prompts.py).
+    with open(jobs_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
     print(f"\nUpdated {count} jobs")
 
 
