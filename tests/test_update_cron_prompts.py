@@ -195,17 +195,23 @@ def test_main_uses_default_path(load_script, tmp_path, monkeypatch):
 
     # Create the test jobs file (wrapped format like the real one)
     jobs = sample_jobs()
-    test_file.write_text(json.dumps({"jobs": jobs}), encoding="utf-8")
+    test_file.write_text(
+        json.dumps({"jobs": jobs, "updated_at": "2026-01-01T00:00:00Z"}),
+        encoding="utf-8",
+    )
     assert test_file.exists()
 
     monkeypatch.setattr(sys, "argv", ["update-cron-prompts"])
     module.main()
 
-    # Verify the file was updated — main() writes a list (unwrapped)
+    # Verify the file was updated — main() PRESERVES the {'jobs': ...} wrapper
+    # and any sibling metadata (e.g. updated_at) instead of dumping a bare list.
     updated = json.loads(test_file.read_text(encoding="utf-8"))
-    assert isinstance(updated, list)
-    assert len(updated) == 6
-    assert "YOLO Mode" in updated[0]["prompt"]
+    assert isinstance(updated, dict)
+    assert updated["updated_at"] == "2026-01-01T00:00:00Z"
+    assert "jobs" in updated
+    assert len(updated["jobs"]) == 6
+    assert "YOLO Mode" in updated["jobs"][0]["prompt"]
 
 
 def test_main_uses_cli_arg(load_script, tmp_path, monkeypatch):
@@ -228,6 +234,15 @@ def test_main_exits_on_missing_file(load_script, tmp_path, monkeypatch):
     module = load_script("scripts/update-cron-prompts.py")
     missing = tmp_path / "does_not_exist.json"
     monkeypatch.setattr(sys, "argv", ["update-cron-prompts", "--jobs-file", str(missing)])
+    with pytest.raises(SystemExit) as exc:
+        module.main()
+    assert exc.value.code == 1
+
+
+def test_main_exits_when_jobs_file_flag_has_no_value(load_script, monkeypatch):
+    """main() exits with code 1 when --jobs-file is the final argument (no path)."""
+    module = load_script("scripts/update-cron-prompts.py")
+    monkeypatch.setattr(sys, "argv", ["update-cron-prompts", "--jobs-file"])
     with pytest.raises(SystemExit) as exc:
         module.main()
     assert exc.value.code == 1
