@@ -25,7 +25,7 @@ def require_live_services():
 def test_cortana_server_is_supervised_and_ready():
     details = launchd_details("ai.cortana.server")
     assert "state = running" in details
-    with urllib.request.urlopen("http://127.0.0.1:7331/ready", timeout=10) as response:
+    with urllib.request.urlopen("http://127.0.0.1:7331/readyz", timeout=10) as response:
         assert response.status == 200
 
 

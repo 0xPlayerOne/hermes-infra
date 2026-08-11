@@ -65,8 +65,8 @@ def infra_health() -> tuple[str, str]:
     if os.environ.get("WATCHDOG_INFRA_CHECKS") != "1":
         return "skipped", "skipped"
     return (
-        curl_ok("http://127.0.0.1:7331/health"),
-        curl_ok("http://127.0.0.1:7331/ready"),
+        curl_ok("http://127.0.0.1:7331/healthz"),
+        curl_ok("http://127.0.0.1:7331/readyz"),
     )
 
 

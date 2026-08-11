@@ -44,8 +44,8 @@ def test_watchdog_infra_health_uses_cortana(load_script, monkeypatch):
 
     assert module.infra_health() == ("healthy", "healthy")
     assert calls == [
-        "http://127.0.0.1:7331/health",
-        "http://127.0.0.1:7331/ready",
+        "http://127.0.0.1:7331/healthz",
+        "http://127.0.0.1:7331/readyz",
     ]
 
 

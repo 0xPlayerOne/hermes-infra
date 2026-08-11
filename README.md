@@ -72,7 +72,7 @@ cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test --all-targets
 "$HERMES_INFRA_VENV/bin/python" scripts/install_launchd.py --check
-curl -fsS http://127.0.0.1:7331/ready
+curl -fsS http://127.0.0.1:7331/readyz
 ```
 
 CI requires at least 80% Python line coverage and 50% Rust line coverage.

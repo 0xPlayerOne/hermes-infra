@@ -12,7 +12,7 @@ Install and verify Cortana from its repository:
 ```bash
 cortana doctor
 cortana service status
-curl -fsS http://127.0.0.1:7331/ready
+curl -fsS http://127.0.0.1:7331/readyz
 ```
 
 Install this repository's `skills/cortana` directory under `$HOME/.hermes/skills/cortana`, then
