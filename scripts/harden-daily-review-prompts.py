@@ -9,7 +9,7 @@ from pathlib import Path
 
 from repo_registry import REPO_REMOTES
 
-JOBS_FILE = "/Users/amf/.hermes/profiles/intern/cron/jobs.json"
+JOBS_FILE = Path.home() / ".hermes/profiles/intern/cron/jobs.json"
 
 # Per-repo test command hints. The canonical remote (org/repo) comes from
 # repo_registry.py so it cannot drift from apply-*/standardize scripts.
