@@ -156,7 +156,7 @@ jobs:
 # The key pattern: production deps grouped with minor/patch only
 # Major production bumps get individual PRs (CI catches failures)
 # Dev deps grouped together
-def npm_dependabot(labels: bool = False) -> str:
+def build_npm_dependabot_config(labels: bool = False) -> str:
     """Return the standard npm dependabot config.
 
     *labels* adds the ``dependencies`` / ``ci`` label sets used by
@@ -193,9 +193,9 @@ updates:
 {ga_labels}"""
 
 
-NPM_DEPENDABOT = npm_dependabot(labels=False)
+NPM_DEPENDABOT = build_npm_dependabot_config(labels=False)
 # nifty-smart-contracts - same npm pattern, plus dependency labels
-NPM_SC_DEPENDABOT = npm_dependabot(labels=True)
+NPM_SC_DEPENDABOT = build_npm_dependabot_config(labels=True)
 
 # PlayFabConfigs uses bun ecosystem
 BUN_DEPENDABOT = """version: 2

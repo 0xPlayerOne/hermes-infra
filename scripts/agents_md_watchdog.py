@@ -92,7 +92,10 @@ def main():
         if agents.exists():
             continue
         # also skip if any immediate subdir has its own AGENTS.md (dispatcher pattern)
-        nested = any((r / d / "AGENTS.md").exists() for d in os.listdir(r) if (r / d).is_dir())
+        try:
+            nested = any((r / d / "AGENTS.md").exists() for d in os.listdir(r) if (r / d).is_dir())
+        except PermissionError:
+            continue
         if nested:
             # e.g. NiftyRoyaleFork has NiftyRoyale/AGENTS.md — already covered
             continue

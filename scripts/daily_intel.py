@@ -5,6 +5,7 @@ import datetime
 import json
 import os
 import re
+import shlex
 import subprocess
 import urllib.request
 
@@ -16,7 +17,7 @@ ARXIV_CATS = os.environ.get("ARXIV_CATEGORIES", "cat:cs.AI+OR+cat:cs.CL+OR+cat:c
 def run(cmd, timeout=25):
     try:
         return subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=timeout
+            shlex.split(cmd), capture_output=True, text=True, timeout=timeout
         ).stdout.strip()
     except Exception as e:
         return f"(err: {e})"
@@ -55,7 +56,7 @@ def build_briefing(
         lines.append("  no open issues/PRs assigned across tracked repos")
 
     lines.append("\n⏰ REMINDERS (today)")
-    reminders = runner("remindctl today 2>/dev/null")
+    reminders = runner("remindctl today")
     lines.append(f"  {reminders if reminders else '(gate closed — run: remindctl authorize)'}")
 
     lines.append("\n📚 ARXIV (fresh)")
