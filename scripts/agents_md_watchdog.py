@@ -93,9 +93,7 @@ def main():
             continue
         # also skip if any immediate subdir has its own AGENTS.md (dispatcher pattern)
         try:
-            nested = any(
-                (r / d / "AGENTS.md").exists() for d in os.listdir(r) if (r / d).is_dir()
-            )
+            nested = any((r / d / "AGENTS.md").exists() for d in os.listdir(r) if (r / d).is_dir())
         except PermissionError:
             continue
         if nested:
