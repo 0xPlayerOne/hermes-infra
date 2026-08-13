@@ -5,8 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-# --- Default jobs file ---
-DEFAULT_JOBS_FILE = Path.home() / ".hermes/profiles/intern/cron/jobs.json"
+from cron_io import DEFAULT_JOBS_FILE, load_jobs, save_jobs
 
 # --- YOLO MODE BLOCK (appended to every repo-agent prompt) ---
 YOLO_REBASING = """\
@@ -135,17 +134,10 @@ def main():
         print(f"Jobs file not found: {jobs_file}")
         sys.exit(1)
 
-    with open(jobs_file, encoding="utf-8") as f:
-        data = json.load(f)
-
-    jobs = data["jobs"] if isinstance(data, dict) and "jobs" in data else data
+    jobs, data = load_jobs(jobs_file)
     count = update_jobs(jobs)
 
-    # Write back the ORIGINAL top-level structure. The real jobs file is
-    # wrapped in {"jobs": [...], "updated_at": ...}; dumping the bare list
-    # would destroy that wrapper (matching harden-daily-review-prompts.py).
-    with open(jobs_file, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    save_jobs(jobs_file, data)
 
     print(f"\nUpdated {count} jobs")
 

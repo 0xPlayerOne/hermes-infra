@@ -14,7 +14,6 @@ import os
 from repo_registry import REPO_PATHS
 
 # Canonical repo name -> local checkout path (see repo_registry.py).
-REPOS = REPO_PATHS
 
 # ============================================================
 # STANDARD CI TEMPLATE for bun/TS repos
@@ -320,7 +319,7 @@ updates:
 
 def write_file(name, relative_path, content, kind):
     """Write *content* under a repo checkout, creating parent directories."""
-    path = os.path.join(REPOS[name], relative_path)
+    path = os.path.join(REPO_PATHS[name], relative_path)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         f.write(content.lstrip("\n"))
