@@ -7,9 +7,10 @@ import json
 import sys
 from pathlib import Path
 
+from cron_io import DEFAULT_JOBS_FILE, load_jobs, save_jobs
 from repo_registry import REPO_REMOTES
 
-JOBS_FILE = Path.home() / ".hermes/profiles/intern/cron/jobs.json"
+JOBS_FILE = DEFAULT_JOBS_FILE
 
 # Per-repo test command hints. The canonical remote (org/repo) comes from
 # repo_registry.py so it cannot drift from apply-*/standardize scripts.
@@ -144,14 +145,10 @@ def main():
         print(f"Jobs file not found: {jobs_file}", file=sys.stderr)
         sys.exit(1)
 
-    with open(jobs_file, encoding="utf-8") as f:
-        data = json.load(f)
-
-    jobs = data["jobs"] if isinstance(data, dict) and "jobs" in data else data
+    jobs, data = load_jobs(jobs_file)
     count = harden_jobs(jobs)
 
-    with open(jobs_file, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    save_jobs(jobs_file, data)
 
     print(f"\n✅ {count} Daily Review jobs updated")
 

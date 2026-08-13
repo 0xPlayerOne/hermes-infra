@@ -229,8 +229,7 @@ def test_apply_main_uses_registry(load_script):
 
 def test_standardize_ci_uses_registry(load_script):
     module = load_script("scripts/standardize-ci-dependabot.py")
-    assert module.REPOS is module.REPO_PATHS
-    assert module.REPOS["pink-binder"].endswith("pink-binder")
+    assert module.REPO_PATHS["pink-binder"].endswith("pink-binder")
 
 
 def test_agents_gen_file_stdin_force_and_skip(load_script, tmp_path, monkeypatch, capsys):

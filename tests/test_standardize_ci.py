@@ -3,10 +3,10 @@ import pytest
 
 @pytest.fixture
 def standardize_module(load_script, monkeypatch, tmp_path):
-    """Load standardize-ci-dependabot.py with REPOS redirected to tmp_path."""
+    """Load standardize-ci-dependabot.py with REPO_PATHS redirected to tmp_path."""
     module = load_script("scripts/standardize-ci-dependabot.py")
-    repos = {name: str(tmp_path / name) for name in module.REPOS}
-    monkeypatch.setattr(module, "REPOS", repos)
+    repos = {name: str(tmp_path / name) for name in module.REPO_PATHS}
+    monkeypatch.setattr(module, "REPO_PATHS", repos)
     return module
 
 

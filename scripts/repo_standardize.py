@@ -55,7 +55,7 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 - Audit critical: `slither` or `forge inspect` before mainnet deploys.
 """
         )
-    if lang == "rust":
+    elif lang == "rust":
         return (
             header
             + """## Stack
@@ -77,7 +77,7 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 - If a Python CLI could be Rust, prefer Rust. Leave `// TODO(rust-migration)` breadcrumbs otherwise.
 """
         )
-    if lang == "typescript":
+    elif lang == "typescript":
         pm = (
             "bun"
             if (sig.get("bun_lock") or not sig.get("npm_lock"))
@@ -104,7 +104,7 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 - 5-verb repo standard: the repo exposes exactly 5 root scripts.
 """
         )
-    if lang == "python":
+    elif lang == "python":
         pm = "uv" if sig.get("uv") else "uv (NO pip — migrate lockfile to uv)"
         return (
             header
@@ -126,7 +126,7 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 - venvs live in `.venv`; never commit them.
 """
         )
-    if lang == "unity-cs":
+    elif lang == "unity-cs":
         return (
             header
             + """## Stack
@@ -144,7 +144,7 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 - Never let an agent treat the Unity project as a Node monorepo.
 """
         )
-    if lang == "mixed-ts-py":
+    elif lang == "mixed-ts-py":
         return (
             header
             + """## Stack
