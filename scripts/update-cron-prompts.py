@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from cron_io import DEFAULT_JOBS_FILE, load_jobs, save_jobs
+from cron_io import DEFAULT_JOBS_FILE, run_jobs_update
 
 # --- YOLO MODE BLOCK (appended to every repo-agent prompt) ---
 YOLO_REBASING = """\
@@ -129,17 +129,7 @@ def _resolve_jobs_file(argv):
 
 def main():
     jobs_file = _resolve_jobs_file(sys.argv)
-
-    if not jobs_file.exists():
-        print(f"Jobs file not found: {jobs_file}")
-        sys.exit(1)
-
-    jobs, data = load_jobs(jobs_file)
-    count = update_jobs(jobs)
-
-    save_jobs(jobs_file, data)
-
-    print(f"\nUpdated {count} jobs")
+    run_jobs_update(jobs_file, update_jobs, success_msg="\nUpdated {count} jobs")
 
 
 if __name__ == "__main__":

@@ -10,7 +10,8 @@ USAGE:
   python3 ~/.hermes/profiles/intern/scripts/send-thread-directive.py "Message" --repo pink-binder
 
   # Multiple specific repos
-  python3 ~/.hermes/profiles/intern/scripts/send-thread-directive.py "Message" --repo pink-binder --repo hermes-infra
+  python3 ~/.hermes/profiles/intern/scripts/send-thread-directive.py "Message" \
+    --repo pink-binder --repo hermes-infra
 
 The message is prefixed with <@1528604968301494282> (Intern @mention) so
 Intern's DISCORD_ALLOW_BOTS=mentions gate admits it.
