@@ -193,10 +193,21 @@ def main():
 
     print(f"== repo_standardize.py: {target}")
     print(f"   detected: {lang}")
-    print(
-        f"   signals : ts={sig['ts']} py={sig['py']} rust={sig['rust']} cs={sig['cs']} sol={sig['sol']} "
-        f"unity={sig['unity']} bun={sig['bun_lock']} npm={sig['npm_lock']} uv={sig['uv']}"
+    signals = " ".join(
+        f"{k}={sig.get(k, False)}"
+        for k in (
+            "ts",
+            "py",
+            "rust",
+            "cs",
+            "sol",
+            "unity",
+            "bun_lock",
+            "npm_lock",
+            "uv",
+        )
     )
+    print(f"   signals : {signals}")
 
     if check_only:
         print("\n--- AGENTS.md (dry-run, not written) ---\n")

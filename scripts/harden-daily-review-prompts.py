@@ -3,10 +3,9 @@
 Harden all Daily Review cron prompts with explicit phase-based workflow.
 """
 
-import sys
 from pathlib import Path
 
-from cron_io import DEFAULT_JOBS_FILE, load_jobs, save_jobs
+from cron_io import DEFAULT_JOBS_FILE, run_jobs_update
 from repo_registry import REPO_REMOTES
 
 JOBS_FILE = DEFAULT_JOBS_FILE
@@ -140,16 +139,11 @@ def harden_jobs(jobs):
 
 def main():
     jobs_file = Path(JOBS_FILE)
-    if not jobs_file.exists():
-        print(f"Jobs file not found: {jobs_file}", file=sys.stderr)
-        sys.exit(1)
-
-    jobs, data = load_jobs(jobs_file)
-    count = harden_jobs(jobs)
-
-    save_jobs(jobs_file, data)
-
-    print(f"\n✅ {count} Daily Review jobs updated")
+    run_jobs_update(
+        jobs_file,
+        harden_jobs,
+        success_msg="\n✅ {count} Daily Review jobs updated",
+    )
 
 
 if __name__ == "__main__":
