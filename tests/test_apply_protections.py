@@ -118,3 +118,50 @@ def test_main_applies_protection_to_every_registry_repo(protections_module, monk
     assert len(calls) == len(protections_module.REPOS) * 2
     for _name, remote, _checks in protections_module.REPOS:
         assert f"repos/{remote}/branches/main/protection" in protection_calls
+
+
+# -- apply-staging-protections tests -----------------------------------------
+
+
+def test_staging_main_applies_to_all_repos(load_script, monkeypatch, capsys):
+    module = load_script("scripts/apply-staging-protections.py")
+    calls = []
+    monkeypatch.setattr(
+        module,
+        "gh_api_put",
+        lambda endpoint, payload: calls.append(endpoint) or _gh_result(),
+    )
+
+    result = module.main()
+    assert result == 0
+    assert len(calls) == len(module.REPOS)
+    for _name, remote in module.REPOS:
+        assert f"repos/{remote}/branches/staging/protection" in calls
+
+
+def test_staging_main_handles_403_error(load_script, monkeypatch, capsys):
+    module = load_script("scripts/apply-staging-protections.py")
+    monkeypatch.setattr(
+        module,
+        "gh_api_put",
+        lambda endpoint, payload: _gh_result(returncode=1, stderr="403 Forbidden"),
+    )
+
+    result = module.main()
+    assert result == 0
+    output = capsys.readouterr().out
+    assert "GitHub Free limitation" in output
+
+
+def test_staging_main_handles_other_error(load_script, monkeypatch, capsys):
+    module = load_script("scripts/apply-staging-protections.py")
+    monkeypatch.setattr(
+        module,
+        "gh_api_put",
+        lambda endpoint, payload: _gh_result(returncode=1, stderr="boom"),
+    )
+
+    result = module.main()
+    assert result == 0
+    output = capsys.readouterr().out
+    assert "❌ Failed: boom" in output
