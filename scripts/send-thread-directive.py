@@ -10,7 +10,8 @@ USAGE:
   python3 ~/.hermes/profiles/intern/scripts/send-thread-directive.py "Message" --repo pink-binder
 
   # Multiple specific repos
-  python3 ~/.hermes/profiles/intern/scripts/send-thread-directive.py "Message" --repo pink-binder --repo hermes-infra
+  python3 ~/.hermes/profiles/intern/scripts/send-thread-directive.py "Message" \
+    --repo pink-binder --repo hermes-infra
 
 The message is prefixed with <@1528604968301494282> (Intern @mention) so
 Intern's DISCORD_ALLOW_BOTS=mentions gate admits it.
@@ -23,35 +24,53 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 
 # --- Repo registry ---
+# Canonical org/repo + local-path data lives in repo_registry.py; this file
+# only owns the Discord thread ID per repo short-name. Deriving THREADS from
+# the registry means a repo added there shows up here automatically instead
+# of drifting across copies.
+from repo_registry import REPO_PATHS, REPO_REMOTES
+
+# Repo short-name -> Discord thread ID
+THREAD_IDS = {
+    "pink-binder": "1528842363269681304",
+    "v0-portfolio": "1528842513941790741",
+    "nifty-contracts-api": "1528842540399464730",
+    "nifty-fe-monorepo": "1528842520723853312",
+    "nifty-league-subgraph": "1528842546925797447",
+    "nifty-smart-contracts": "1528842534300946462",
+    "PlayFabConfigs": "1528842526960910396",
+    "hermes-infra": "1529478098435706880",
+    "model-gateway": "1529478099962433647",
+}
+
+
+def _home_relative(path: str) -> str:
+    """Render an absolute local path as ~-relative for display.
+
+    Registry paths are absolute on the operator machine (``/Users/<name>/...``).
+    When the current user's home differs (e.g. CI runners where HOME is
+    ``/home/runner``), still render the operator path as ``~/...`` so the
+    display format stays stable.
+    """
+    home = str(Path.home())
+    if path.startswith(home):
+        return "~" + path[len(home) :]
+    parts = path.split("/")
+    if len(parts) > 3 and parts[1] == "Users":
+        return "~/" + "/".join(parts[3:])
+    return path
+
+
 # Thread ID -> (org/name, local_path)
 THREADS = {
-    "1528842363269681304": ("0xPlayerOne/pink-binder", "~/Developer/pink-binder"),
-    "1528842513941790741": ("0xPlayerOne/v0-portfolio", "~/Developer/v0-portfolio"),
-    "1528842540399464730": (
-        "NiftyLeague/nifty-contracts-api",
-        "~/Developer/NiftyLeague/nifty-contracts-api",
-    ),
-    "1528842520723853312": (
-        "NiftyLeague/nifty-fe-monorepo",
-        "~/Developer/NiftyLeague/nifty-fe-monorepo",
-    ),
-    "1528842546925797447": (
-        "NiftyLeague/nifty-league-subgraph",
-        "~/Developer/NiftyLeague/nifty-league-subgraph",
-    ),
-    "1528842534300946462": (
-        "NiftyLeague/nifty-smart-contracts",
-        "~/Developer/NiftyLeague/nifty-smart-contracts",
-    ),
-    "1528842526960910396": ("NiftyLeague/PlayFabConfigs", "~/Developer/NiftyLeague/PlayFabConfigs"),
-    "1529478098435706880": ("0xPlayerOne/hermes-infra", "~/Developer/hermes-infra"),
-    "1529478099962433647": ("0xPlayerOne/model-gateway", "~/Developer/model-gateway"),
+    tid: (REPO_REMOTES[name], _home_relative(REPO_PATHS[name])) for name, tid in THREAD_IDS.items()
 }
 
 # Map repo short-name to thread ID
-REPO_TO_THREAD = {name.split("/")[1]: tid for tid, (name, _) in THREADS.items()}
+REPO_TO_THREAD = {name: tid for name, tid in THREAD_IDS.items()}
 
 INTERN_MENTION = "<@1528604968301494282>"
 SIGNATURE = "\n\n-- **Ye** (directive)"

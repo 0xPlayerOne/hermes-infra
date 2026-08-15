@@ -32,7 +32,7 @@ See [`cortana-integration.md`](cortana-integration.md) for the exact boundary an
 cortana doctor
 cortana service status
 hermes mcp list
-curl -fsS http://127.0.0.1:7331/ready
+curl -fsS http://127.0.0.1:7331/readyz
 "$HERMES_INFRA_VENV/bin/python" "$HERMES_INFRA_DIR/scripts/install_launchd.py" --check
 ```
 

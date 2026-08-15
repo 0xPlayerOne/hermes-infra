@@ -44,8 +44,8 @@ def test_watchdog_infra_health_uses_cortana(load_script, monkeypatch):
 
     assert module.infra_health() == ("healthy", "healthy")
     assert calls == [
-        "http://127.0.0.1:7331/health",
-        "http://127.0.0.1:7331/ready",
+        "http://127.0.0.1:7331/healthz",
+        "http://127.0.0.1:7331/readyz",
     ]
 
 
@@ -124,6 +124,17 @@ def test_repo_standardize_solidity_template_picks_tool(load_script):
     assert "- **Toolchain:** Foundry (forge)" in text
     signals["sol_tool"] = "hardhat.config.ts"
     text = module.agents_md("solidity", signals, "fixture")
+    assert "- **Toolchain:** Hardhat" in text
+
+
+def test_repo_standardize_accepts_partial_signals(load_script):
+    """agents_md tolerates sparse signal dicts (defensive .get access)."""
+    module = load_script("scripts/repo_standardize.py")
+    text = module.agents_md("typescript", {"bun_lock": True}, "fixture")
+    assert "- **Package manager:** bun" in text
+    text = module.agents_md("python", {"uv": True}, "fixture")
+    assert "- **Package manager:** uv" in text
+    text = module.agents_md("solidity", {}, "fixture")
     assert "- **Toolchain:** Hardhat" in text
 
 
@@ -218,8 +229,7 @@ def test_apply_main_uses_registry(load_script):
 
 def test_standardize_ci_uses_registry(load_script):
     module = load_script("scripts/standardize-ci-dependabot.py")
-    assert module.REPOS is module.REPO_PATHS
-    assert module.REPOS["pink-binder"].endswith("pink-binder")
+    assert module.REPO_PATHS["pink-binder"].endswith("pink-binder")
 
 
 def test_agents_gen_file_stdin_force_and_skip(load_script, tmp_path, monkeypatch, capsys):

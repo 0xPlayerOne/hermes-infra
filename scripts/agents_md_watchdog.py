@@ -65,8 +65,8 @@ def infra_health() -> tuple[str, str]:
     if os.environ.get("WATCHDOG_INFRA_CHECKS") != "1":
         return "skipped", "skipped"
     return (
-        curl_ok("http://127.0.0.1:7331/health"),
-        curl_ok("http://127.0.0.1:7331/ready"),
+        curl_ok("http://127.0.0.1:7331/healthz"),
+        curl_ok("http://127.0.0.1:7331/readyz"),
     )
 
 
@@ -92,7 +92,10 @@ def main():
         if agents.exists():
             continue
         # also skip if any immediate subdir has its own AGENTS.md (dispatcher pattern)
-        nested = any((r / d / "AGENTS.md").exists() for d in os.listdir(r) if (r / d).is_dir())
+        try:
+            nested = any((r / d / "AGENTS.md").exists() for d in os.listdir(r) if (r / d).is_dir())
+        except PermissionError:
+            continue
         if nested:
             # e.g. NiftyRoyaleFork has NiftyRoyale/AGENTS.md — already covered
             continue

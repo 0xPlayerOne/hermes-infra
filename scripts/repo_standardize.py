@@ -36,7 +36,7 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 
 """
     if lang == "solidity":
-        tool = "Foundry (forge)" if sig["sol_tool"] == "foundry.toml" else "Hardhat"
+        tool = "Foundry (forge)" if sig.get("sol_tool") == "foundry.toml" else "Hardhat"
         return (
             header
             + f"""## Stack
@@ -55,7 +55,7 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 - Audit critical: `slither` or `forge inspect` before mainnet deploys.
 """
         )
-    if lang == "rust":
+    elif lang == "rust":
         return (
             header
             + """## Stack
@@ -77,10 +77,10 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 - If a Python CLI could be Rust, prefer Rust. Leave `// TODO(rust-migration)` breadcrumbs otherwise.
 """
         )
-    if lang == "typescript":
+    elif lang == "typescript":
         pm = (
             "bun"
-            if (sig["bun_lock"] or not sig["npm_lock"])
+            if (sig.get("bun_lock") or not sig.get("npm_lock"))
             else "bun (npm lock present — migrate to bun)"
         )
         return (
@@ -104,8 +104,8 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 - 5-verb repo standard: the repo exposes exactly 5 root scripts.
 """
         )
-    if lang == "python":
-        pm = "uv" if sig["uv"] else "uv (NO pip — migrate lockfile to uv)"
+    elif lang == "python":
+        pm = "uv" if sig.get("uv") else "uv (NO pip — migrate lockfile to uv)"
         return (
             header
             + f"""## Stack
@@ -126,7 +126,7 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 - venvs live in `.venv`; never commit them.
 """
         )
-    if lang == "unity-cs":
+    elif lang == "unity-cs":
         return (
             header
             + """## Stack
@@ -144,7 +144,7 @@ def agents_md(lang: str, sig: dict, repo_name: str) -> str:
 - Never let an agent treat the Unity project as a Node monorepo.
 """
         )
-    if lang == "mixed-ts-py":
+    elif lang == "mixed-ts-py":
         return (
             header
             + """## Stack
@@ -193,10 +193,21 @@ def main():
 
     print(f"== repo_standardize.py: {target}")
     print(f"   detected: {lang}")
-    print(
-        f"   signals : ts={sig['ts']} py={sig['py']} rust={sig['rust']} cs={sig['cs']} sol={sig['sol']} "
-        f"unity={sig['unity']} bun={sig['bun_lock']} npm={sig['npm_lock']} uv={sig['uv']}"
+    signals = " ".join(
+        f"{k}={sig.get(k, False)}"
+        for k in (
+            "ts",
+            "py",
+            "rust",
+            "cs",
+            "sol",
+            "unity",
+            "bun_lock",
+            "npm_lock",
+            "uv",
+        )
     )
+    print(f"   signals : {signals}")
 
     if check_only:
         print("\n--- AGENTS.md (dry-run, not written) ---\n")

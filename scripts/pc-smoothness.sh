@@ -247,7 +247,7 @@ wt_branch() {  # worktree dir -> current branch ("" if detached)
 }
 
 wt_dirty() {  # worktree dir -> number of modified/staged (non-untracked) lines
-  git -C "$1" status --porcelain 2>/dev/null | grep -v '^??' | wc -l | tr -d ' '
+  git -C "$1" status --porcelain 2>/dev/null | grep -cv '^??' | tr -d ' '
 }
 
 prune_tree() {  # path -> remove + accumulate totals
@@ -282,7 +282,7 @@ for d in /private/tmp/*; do
   branch=""
   sz="$(du -sk "$d" 2>/dev/null | awk '{print $1}')"
   [ -z "$sz" ] && sz=0
-  refs="$(lsof +D "$d" 2>/dev/null | grep -v '^COMMAND' | wc -l | tr -d ' ')"
+  refs="$(lsof +D "$d" 2>/dev/null | grep -cv '^COMMAND' | tr -d ' ')"
   [ "${refs:-0}" -gt 0 ] && continue                      # live process -> never
 
   age_days=$(( ($(date +%s) - $(stat -f '%m' "$d")) / 86400 ))

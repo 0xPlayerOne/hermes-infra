@@ -3,10 +3,10 @@ import pytest
 
 @pytest.fixture
 def standardize_module(load_script, monkeypatch, tmp_path):
-    """Load standardize-ci-dependabot.py with REPOS redirected to tmp_path."""
+    """Load standardize-ci-dependabot.py with REPO_PATHS redirected to tmp_path."""
     module = load_script("scripts/standardize-ci-dependabot.py")
-    repos = {name: str(tmp_path / name) for name in module.REPOS}
-    monkeypatch.setattr(module, "REPOS", repos)
+    repos = {name: str(tmp_path / name) for name in module.REPO_PATHS}
+    monkeypatch.setattr(module, "REPO_PATHS", repos)
     return module
 
 
@@ -75,3 +75,17 @@ def test_write_file_shared_helper(standardize_module, tmp_path):
     )
     expected = tmp_path / "hermes-infra" / ".github" / "custom.yml"
     assert expected.read_text(encoding="utf-8") == "name: custom\n"
+
+
+def test_npm_dependabot_builder_matches_constants(standardize_module):
+    """The parametrized builder reproduces both historical templates exactly."""
+    assert (
+        standardize_module.build_npm_dependabot_config(labels=False)
+        == standardize_module.NPM_DEPENDABOT
+    )
+    assert (
+        standardize_module.build_npm_dependabot_config(labels=True)
+        == standardize_module.NPM_SC_DEPENDABOT
+    )
+    assert "labels" not in standardize_module.NPM_DEPENDABOT
+    assert "      - ci" in standardize_module.NPM_SC_DEPENDABOT

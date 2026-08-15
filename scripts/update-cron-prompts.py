@@ -5,8 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-# --- Default jobs file ---
-DEFAULT_JOBS_FILE = Path.home() / ".hermes/profiles/intern/cron/jobs.json"
+from cron_io import DEFAULT_JOBS_FILE, run_jobs_update
 
 # --- YOLO MODE BLOCK (appended to every repo-agent prompt) ---
 YOLO_REBASING = """\
@@ -117,23 +116,20 @@ def update_jobs(jobs, *, out=None):
     return count
 
 
-def main():
-    jobs_file = (
-        Path(sys.argv[sys.argv.index("--jobs-file") + 1])
-        if "--jobs-file" in sys.argv
-        else DEFAULT_JOBS_FILE
-    )
-
-    if not jobs_file.exists():
-        print(f"Jobs file not found: {jobs_file}")
+def _resolve_jobs_file(argv):
+    """Return the jobs file path from argv, defaulting to DEFAULT_JOBS_FILE."""
+    if "--jobs-file" not in argv:
+        return DEFAULT_JOBS_FILE
+    flag = argv.index("--jobs-file")
+    if flag + 1 >= len(argv):
+        print("ERROR: --jobs-file requires a path argument", file=sys.stderr)
         sys.exit(1)
+    return Path(argv[flag + 1])
 
-    with open(jobs_file, encoding="utf-8") as f:
-        data = json.load(f)
 
-    jobs = data["jobs"] if isinstance(data, dict) and "jobs" in data else data
-    count = update_jobs(jobs, out=jobs_file)
-    print(f"\nUpdated {count} jobs")
+def main():
+    jobs_file = _resolve_jobs_file(sys.argv)
+    run_jobs_update(jobs_file, update_jobs, success_msg="\nUpdated {count} jobs")
 
 
 if __name__ == "__main__":
