@@ -16,7 +16,7 @@ else
   # python@3.11 is mise-managed (config.toml pins 3.11) -- brew cannot touch it
   echo "python@3.11 is not brew-managed (mise-managed) -- brew upgrade cannot affect it. Verifying mise pin..."
   if ! mise ls python 2>/dev/null | grep -q "3\.11"; then
-    echo "ERROR: python 3.11 not found in mise. Chromadb pipeline may be at risk."
+    echo "ERROR: python 3.11 not found in mise. Cortana connector maintenance may be at risk."
     exit 1
   fi
   echo "mise python 3.11 pin verified."
