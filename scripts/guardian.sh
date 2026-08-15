@@ -40,10 +40,12 @@ resolve_path() {
   local value="$1"
   value="${value//\$\{HOME\}/$HOME}"
   value="${value//\$HOME/$HOME}"
-  case "$value" in
-    "~/"*) value="$HOME/${value#~/}" ;;
-    "~") value="$HOME" ;;
-  esac
+  # shellcheck disable=SC2088
+  if [[ "${value:0:2}" == "~/" ]]; then
+    value="$HOME/${value#~/}"
+  elif [[ "$value" == "~" ]]; then
+    value="$HOME"
+  fi
   printf '%s' "$value"
 }
 
