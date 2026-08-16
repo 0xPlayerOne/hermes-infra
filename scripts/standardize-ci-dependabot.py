@@ -357,13 +357,7 @@ if __name__ == "__main__":
     print("\n=== Dependabot ===")
 
     # npm repos (bun-managed but npm ecosystem works for dependabot)
-    for name in [
-        "pink-binder",
-        "v0-portfolio",
-        "nifty-contracts-api",
-        "nifty-fe-monorepo",
-        "nifty-league-subgraph",
-    ]:
+    for name in BUN_REPOS:
         write_dependabot(name, NPM_DEPENDABOT)
 
     # nifty-smart-contracts npm with labels

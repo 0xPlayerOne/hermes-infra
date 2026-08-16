@@ -87,13 +87,11 @@ def test_harden_jobs_unknown_repo_uses_fallback(load_script):
     assert "bun test" in jobs[0]["prompt"]
 
 
-def test_repo_info_remotes_match_registry(load_script):
-    """REPO_INFO remotes must equal repo_registry.REPO_REMOTES (single source)."""
+def test_test_commands_keys_match_registry(load_script):
+    """TEST_COMMANDS keys must equal repo_registry.REPO_REMOTES (single source)."""
     module = load_script("scripts/harden-daily-review-prompts.py")
     registry = load_script("scripts/repo_registry.py")
-    for name, (remote, _cmd) in module.REPO_INFO.items():
-        assert remote == registry.REPO_REMOTES[name], f"{name} remote drifted from registry"
-    assert set(module.REPO_INFO) == set(registry.REPO_REMOTES)
+    assert set(module.TEST_COMMANDS) == set(registry.REPO_REMOTES)
 
 
 def test_harden_jobs_repo_name_without_dash(load_script):
