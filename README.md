@@ -60,8 +60,8 @@ hermes-infra/
 - Hermes owns its gateway, agent/runtime configuration, guardrails, and unrelated schedules.
 - New knowledge sources belong in Cortana configuration. Do not add a Hermes cron prompt or a
   second vector database for them.
-- Hindsight and Honcho are optional derived-memory providers evaluated behind Cortana's documented
-  boundary; neither is a canonical store or a Hermes infrastructure dependency.
+- Cortana's native SQLite memory is the only supported operational-memory path. Hermes does not
+  install, configure, or depend on Hindsight, Honcho, or another external memory provider.
 
 ## Validation
 
