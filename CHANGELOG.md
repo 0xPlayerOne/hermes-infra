@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.13](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.12...hermes-infra-v0.2.13) (2026-08-21)
+
+
+### Documentation
+
+* make native memory boundary explicit ([#135](https://github.com/0xPlayerOne/hermes-infra/issues/135)) ([0817347](https://github.com/0xPlayerOne/hermes-infra/commit/0817347715277e8fcb084cce6401f03a3e6543c8))
+
 ## [0.2.12](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.11...hermes-infra-v0.2.12) (2026-08-15)
 
 
