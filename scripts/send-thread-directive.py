@@ -64,9 +64,6 @@ def _home_relative(path: str) -> str:
     return path
 
 
-# Map repo short-name to thread ID
-REPO_TO_THREAD = THREAD_IDS
-
 INTERN_MENTION = "<@1528604968301494282>"
 SIGNATURE = "\n\n-- **Ye** (directive)"
 
@@ -120,17 +117,17 @@ def main():
     if args.repos:
         targets = {}
         for r in args.repos:
-            if r in REPO_TO_THREAD:
-                tid = REPO_TO_THREAD[r]
+            if r in THREAD_IDS:
+                tid = THREAD_IDS[r]
                 targets[tid] = _thread_info(r)
             else:
                 print(f"WARNING: Unknown repo '{r}'. Skipping.", file=sys.stderr)
-                print(f"  Known repos: {', '.join(sorted(REPO_TO_THREAD.keys()))}", file=sys.stderr)
+                print(f"  Known repos: {', '.join(sorted(THREAD_IDS.keys()))}", file=sys.stderr)
         if not targets:
             print("ERROR: No valid repos specified.", file=sys.stderr)
             sys.exit(1)
     else:
-        targets = {tid: _thread_info(name) for name, tid in REPO_TO_THREAD.items()}
+        targets = {tid: _thread_info(name) for name, tid in THREAD_IDS.items()}
 
     # Build message
     msg_parts = []
