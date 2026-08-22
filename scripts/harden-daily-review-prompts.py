@@ -8,8 +8,6 @@ from pathlib import Path
 from cron_io import DEFAULT_JOBS_FILE, run_jobs_update
 from repo_registry import REPO_REMOTES
 
-JOBS_FILE = DEFAULT_JOBS_FILE
-
 # Per-repo test command hints. The canonical remote (org/repo) comes from
 # repo_registry.py so it cannot drift from apply-*/standardize scripts.
 TEST_COMMANDS = {
@@ -23,9 +21,6 @@ TEST_COMMANDS = {
     "hermes-infra": "cargo test && .venv/bin/python -m pytest -q --cov",
     "model-gateway": "cargo test --all-features",
 }
-
-# Repo short-name -> (remote, test command)
-REPO_INFO = {name: (REPO_REMOTES[name], cmd) for name, cmd in TEST_COMMANDS.items()}
 
 HARDENED_PROMPT = """You are a daily code reviewer for {remote}. Your mission: execute ALL 4 phases below in order. Do NOT stop until Phase 4 is complete.
 
@@ -130,7 +125,8 @@ def harden_jobs(jobs):
             continue
         name = job["name"]
         repo_name = name.split(" - ", 1)[1] if " - " in name else name
-        remote, test_cmd = REPO_INFO.get(repo_name, ("unknown/repo", "bun test"))
+        remote = REPO_REMOTES.get(repo_name, "unknown/repo")
+        test_cmd = TEST_COMMANDS.get(repo_name, "bun test")
         job["prompt"] = HARDENED_PROMPT.format(remote=remote, test_cmd=test_cmd)
         updated += 1
         print(f"  ✓ {name}")
@@ -138,7 +134,7 @@ def harden_jobs(jobs):
 
 
 def main():
-    jobs_file = Path(JOBS_FILE)
+    jobs_file = Path(DEFAULT_JOBS_FILE)
     run_jobs_update(
         jobs_file,
         harden_jobs,

@@ -51,14 +51,12 @@ def _setup_main(load_script, monkeypatch, tmp_path):
 def test_module_constants(load_script):
     """Verify thread registry consistency."""
     module = load_script("scripts/send-thread-directive.py")
-    assert len(module.THREADS) == 9
-    # Every entry should have a 2-tuple value
-    for _tid, (repo_name, local_path) in module.THREADS.items():
-        assert "/" in repo_name, f"{repo_name} is not org/repo format"
-        assert local_path.startswith("~/Developer/")
-    # Every thread ID maps back
-    for _tid in module.THREADS:
-        assert _tid in module.REPO_TO_THREAD.values()
+    # THREAD_IDS maps short names to thread IDs
+    assert len(module.THREAD_IDS) == 9
+    for name, tid in module.THREAD_IDS.items():
+        assert isinstance(tid, str)
+        assert name in module.REPO_REMOTES
+        assert name in module.REPO_PATHS
 
 
 def test_home_relative_handles_ci_home(load_script, monkeypatch):
@@ -82,11 +80,11 @@ def test_repo_to_thread_mapping(load_script):
     """Verify REPO_TO_THREAD maps short names correctly."""
     module = load_script("scripts/send-thread-directive.py")
     # Known repo short names
-    assert "pink-binder" in module.REPO_TO_THREAD
-    assert "hermes-infra" in module.REPO_TO_THREAD
-    assert "model-gateway" in module.REPO_TO_THREAD
+    assert "pink-binder" in module.THREAD_IDS
+    assert "hermes-infra" in module.THREAD_IDS
+    assert "model-gateway" in module.THREAD_IDS
     # 9 threads -> 9 short names
-    assert len(module.REPO_TO_THREAD) == 9
+    assert len(module.THREAD_IDS) == 9
 
 
 def test_resolve_token_success(load_script, monkeypatch, tmp_path):

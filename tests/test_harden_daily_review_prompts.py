@@ -87,13 +87,11 @@ def test_harden_jobs_unknown_repo_uses_fallback(load_script):
     assert "bun test" in jobs[0]["prompt"]
 
 
-def test_repo_info_remotes_match_registry(load_script):
-    """REPO_INFO remotes must equal repo_registry.REPO_REMOTES (single source)."""
+def test_test_commands_keys_match_registry(load_script):
+    """TEST_COMMANDS keys must equal repo_registry.REPO_REMOTES (single source)."""
     module = load_script("scripts/harden-daily-review-prompts.py")
     registry = load_script("scripts/repo_registry.py")
-    for name, (remote, _cmd) in module.REPO_INFO.items():
-        assert remote == registry.REPO_REMOTES[name], f"{name} remote drifted from registry"
-    assert set(module.REPO_INFO) == set(registry.REPO_REMOTES)
+    assert set(module.TEST_COMMANDS) == set(registry.REPO_REMOTES)
 
 
 def test_harden_jobs_repo_name_without_dash(load_script):
@@ -137,10 +135,10 @@ def test_harden_jobs_is_idempotent(load_script):
 
 
 def test_main_reads_and_writes_file(load_script, tmp_path, monkeypatch):
-    """main() reads JOBS_FILE, hardens Daily Review jobs, and writes back."""
+    """main() reads DEFAULT_JOBS_FILE, hardens Daily Review jobs, and writes back."""
     module = load_script("scripts/harden-daily-review-prompts.py")
     test_file = tmp_path / "jobs.json"
-    monkeypatch.setattr(module, "JOBS_FILE", test_file)
+    monkeypatch.setattr(module, "DEFAULT_JOBS_FILE", test_file)
 
     jobs = [
         {"name": "Daily Review - pink-binder", "prompt": "old"},
@@ -163,7 +161,7 @@ def test_main_handles_unwrapped_jobs_list(load_script, tmp_path, monkeypatch):
     """main() handles a jobs file that is a bare list (no 'jobs' wrapper)."""
     module = load_script("scripts/harden-daily-review-prompts.py")
     test_file = tmp_path / "jobs.json"
-    monkeypatch.setattr(module, "JOBS_FILE", test_file)
+    monkeypatch.setattr(module, "DEFAULT_JOBS_FILE", test_file)
 
     jobs = [{"name": "Daily Review - model-gateway", "prompt": "old"}]
     test_file.write_text(json.dumps(jobs), encoding="utf-8")
@@ -180,7 +178,7 @@ def test_main_exits_on_missing_file(load_script, tmp_path, monkeypatch):
     """main() exits with code 1 when the jobs file does not exist."""
     module = load_script("scripts/harden-daily-review-prompts.py")
     missing = tmp_path / "does_not_exist.json"
-    monkeypatch.setattr(module, "JOBS_FILE", missing)
+    monkeypatch.setattr(module, "DEFAULT_JOBS_FILE", missing)
 
     monkeypatch.setattr(sys, "argv", ["harden-daily-review-prompts"])
     with pytest.raises(SystemExit) as exc:
