@@ -24,9 +24,6 @@ TEST_COMMANDS = {
     "model-gateway": "cargo test --all-features",
 }
 
-# Repo short-name -> (remote, test command)
-REPO_INFO = {name: (REPO_REMOTES[name], cmd) for name, cmd in TEST_COMMANDS.items()}
-
 HARDENED_PROMPT = """You are a daily code reviewer for {remote}. Your mission: execute ALL 4 phases below in order. Do NOT stop until Phase 4 is complete.
 
 You have `gh` authenticated. Workdir is the repo root. AGENTS.md has exact commands.
@@ -130,7 +127,8 @@ def harden_jobs(jobs):
             continue
         name = job["name"]
         repo_name = name.split(" - ", 1)[1] if " - " in name else name
-        remote, test_cmd = REPO_INFO.get(repo_name, ("unknown/repo", "bun test"))
+        remote = REPO_REMOTES.get(repo_name, "unknown/repo")
+        test_cmd = TEST_COMMANDS.get(repo_name, "bun test")
         job["prompt"] = HARDENED_PROMPT.format(remote=remote, test_cmd=test_cmd)
         updated += 1
         print(f"  ✓ {name}")
