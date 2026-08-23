@@ -8,8 +8,6 @@ from pathlib import Path
 from cron_io import DEFAULT_JOBS_FILE, run_jobs_update
 from repo_registry import REPO_REMOTES
 
-JOBS_FILE = DEFAULT_JOBS_FILE
-
 # Per-repo test command hints. The canonical remote (org/repo) comes from
 # repo_registry.py so it cannot drift from apply-*/standardize scripts.
 TEST_COMMANDS = {
@@ -136,7 +134,7 @@ def harden_jobs(jobs):
 
 
 def main():
-    jobs_file = Path(JOBS_FILE)
+    jobs_file = Path(DEFAULT_JOBS_FILE)
     run_jobs_update(
         jobs_file,
         harden_jobs,
