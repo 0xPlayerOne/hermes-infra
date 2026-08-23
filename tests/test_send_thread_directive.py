@@ -76,8 +76,8 @@ def test_home_relative_handles_ci_home(load_script, monkeypatch):
     assert module._home_relative("/opt/other/path") == "/opt/other/path"
 
 
-def test_repo_to_thread_mapping(load_script):
-    """Verify REPO_TO_THREAD maps short names correctly."""
+def test_thread_ids_mapping(load_script):
+    """Verify THREAD_IDS maps short names correctly."""
     module = load_script("scripts/send-thread-directive.py")
     # Known repo short names
     assert "pink-binder" in module.THREAD_IDS
