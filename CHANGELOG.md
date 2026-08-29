@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.15](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.14...hermes-infra-v0.2.15) (2026-08-29)
+
+
+### Maintenance
+
+* **deps-dev:** bump ruff in the python-dependencies group ([#150](https://github.com/0xPlayerOne/hermes-infra/issues/150)) ([66ffb59](https://github.com/0xPlayerOne/hermes-infra/commit/66ffb596dc865ab4a704e2159f3fad7d13d0e180))
+
 ## [0.2.14](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.13...hermes-infra-v0.2.14) (2026-08-29)
 
 
