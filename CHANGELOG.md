@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.14](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.13...hermes-infra-v0.2.14) (2026-08-29)
+
+
+### Maintenance
+
+* **code-foundry:** sync to v0.39.0 — direct workflow, muse spark model ([#148](https://github.com/0xPlayerOne/hermes-infra/issues/148)) ([f7fede9](https://github.com/0xPlayerOne/hermes-infra/commit/f7fede9dcbb66e76e23f135a71c15c14ee884538))
+
 ## [0.2.13](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.12...hermes-infra-v0.2.13) (2026-08-21)
 
 
