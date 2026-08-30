@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.16](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.15...hermes-infra-v0.2.16) (2026-08-30)
+
+
+### Maintenance
+
+* sync repo registry paths to 0xPlayerOne layout ([#151](https://github.com/0xPlayerOne/hermes-infra/issues/151)) ([f14a725](https://github.com/0xPlayerOne/hermes-infra/commit/f14a725cbb7aa350437a01032e66379e4078a1c1))
+
 ## [0.2.15](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.14...hermes-infra-v0.2.15) (2026-08-29)
 
 
