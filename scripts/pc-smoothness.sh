@@ -31,7 +31,7 @@ USER="${USER:-$(id -un)}"
 DRY_RUN=0
 [ "${1:-}" = "--dry-run" ] && DRY_RUN=1
 
-INFRA_DIR="${HERMES_INFRA_DIR:-$HOME/Developer/hermes-infra}"
+INFRA_DIR="${HERMES_INFRA_DIR:-$HOME/Developer/0xPlayerOne/hermes-infra}"
 # HERMES_INFRA_DIR is exported as the LITERAL string '$HOME/...' in this
 # environment — expand it so logs land in the real repo, not a '$HOME' dir.
 case "$INFRA_DIR" in

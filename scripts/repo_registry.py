@@ -13,7 +13,11 @@ personal infra repo and the checkouts live under ~/Developer.
 # Ordered: display name -> (owner/repo, local path)
 REPOS = [
     ("pink-binder", "0xPlayerOne/pink-binder", "/Users/amf/Developer/pink-binder"),
-    ("v0-portfolio", "0xPlayerOne/v0-portfolio", "/Users/amf/Developer/v0-portfolio"),
+    (
+        "v0-portfolio",
+        "0xPlayerOne/v0-portfolio",
+        "/Users/amf/Developer/0xPlayerOne/v0-portfolio",
+    ),
     (
         "nifty-contracts-api",
         "NiftyLeague/nifty-contracts-api",
@@ -36,11 +40,19 @@ REPOS = [
     ),
     (
         "PlayFabConfigs",
-        "NiftyLeague/PlayFabConfigs",
-        "/Users/amf/Developer/NiftyLeague/PlayFabConfigs",
+        "NiftyLeague/nifty-playfab-configs",
+        "/Users/amf/Developer/NiftyLeague/nifty-playfab-configs",
     ),
-    ("hermes-infra", "0xPlayerOne/hermes-infra", "/Users/amf/Developer/hermes-infra"),
-    ("model-gateway", "0xPlayerOne/model-gateway", "/Users/amf/Developer/model-gateway"),
+    (
+        "hermes-infra",
+        "0xPlayerOne/hermes-infra",
+        "/Users/amf/Developer/0xPlayerOne/hermes-infra",
+    ),
+    (
+        "model-gateway",
+        "0xPlayerOne/model-gateway",
+        "/Users/amf/Developer/0xPlayerOne/model-gateway",
+    ),
 ]
 
 REPO_NAMES = [name for name, _, _ in REPOS]
