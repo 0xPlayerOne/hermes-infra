@@ -1,7 +1,7 @@
 # hermes-infra
 
 Hermes-specific agent guardrails, fleet maintenance, gateway configuration, and integration with
-the shared [Cortana](https://github.com/0xPlayerOne/cortana) knowledge system.
+the shared [Cortana](https://github.com/adea-ai/cortana) knowledge system.
 
 Knowledge ingestion, code indexing, embeddings, long-term evidence retrieval, MCP, and the
 second-brain UI are owned by Cortana. This repository deliberately does not run a parallel TEI,
