@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.17](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.16...hermes-infra-v0.2.17) (2026-09-05)
+
+
+### Bug Fixes
+
+* update pink-binder local checkout path to PinkBinder ([#159](https://github.com/0xPlayerOne/hermes-infra/issues/159)) ([a7c3982](https://github.com/0xPlayerOne/hermes-infra/commit/a7c3982791bc41801093c124d659d73d981d5655))
+
 ## [0.2.16](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.15...hermes-infra-v0.2.16) (2026-08-30)
 
 
