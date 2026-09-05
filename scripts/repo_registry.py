@@ -12,7 +12,7 @@ personal infra repo and the checkouts live under ~/Developer.
 
 # Ordered: display name -> (owner/repo, local path)
 REPOS = [
-    ("pink-binder", "0xPlayerOne/pink-binder", "/Users/amf/Developer/pink-binder"),
+    ("pink-binder", "0xPlayerOne/pink-binder", "/Users/amf/Developer/PinkBinder"),
     (
         "v0-portfolio",
         "0xPlayerOne/v0-portfolio",
