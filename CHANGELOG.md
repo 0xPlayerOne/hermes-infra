@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.18](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.17...hermes-infra-v0.2.18) (2026-09-05)
+
+
+### Maintenance
+
+* **sync:** adopt code-foundry v0.40.3 baseline ([d7d9cea](https://github.com/0xPlayerOne/hermes-infra/commit/d7d9cea48720b23263a00d094f68e696257e53c8))
+
 ## [0.2.17](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.16...hermes-infra-v0.2.17) (2026-09-05)
 
 
