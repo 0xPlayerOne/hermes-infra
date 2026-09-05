@@ -70,7 +70,7 @@ def test_home_relative_handles_ci_home(load_script, monkeypatch):
     """
     module = load_script("scripts/send-thread-directive.py")
     monkeypatch.setenv("HOME", "/home/runner")
-    assert module._home_relative("/Users/amf/Developer/pink-binder") == "~/Developer/pink-binder"
+    assert module._home_relative("/Users/amf/Developer/PinkBinder") == "~/Developer/PinkBinder"
     assert (
         module._home_relative("/Users/amf/Developer/NiftyLeague/nifty-fe-monorepo")
         == "~/Developer/NiftyLeague/nifty-fe-monorepo"
