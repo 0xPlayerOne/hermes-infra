@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.21](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.20...hermes-infra-v0.2.21) (2026-09-06)
+
+
+### Tests
+
+* harden agents_md_watchdog coverage from 81% to 100% ([1545efd](https://github.com/0xPlayerOne/hermes-infra/commit/1545efd94b492dbe5a8514f8637a4d95ecc6e6ca))
+
+
+### Maintenance
+
+* **deps-dev:** bump the python-dependencies group with 3 updates ([45079ec](https://github.com/0xPlayerOne/hermes-infra/commit/45079ecfb3681d65c64b5e952b7a8f5f53b2c16f))
+* **deps:** weekly update ([1cc43ac](https://github.com/0xPlayerOne/hermes-infra/commit/1cc43ac95c70e3e29978aa026ea10d43a58fab49))
+* update Cortana reference from 0xPlayerOne to adea-ai ([bdddb04](https://github.com/0xPlayerOne/hermes-infra/commit/bdddb045905a465bf8766ef0f303d769107f8746))
+
 ## [0.2.20](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.19...hermes-infra-v0.2.20) (2026-09-06)
 
 
