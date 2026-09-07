@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.25](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.24...hermes-infra-v0.2.25) (2026-09-07)
+
+
+### Bug Fixes
+
+* **ci:** pin generated callers to the adopted v1.4.1 runtime ([#181](https://github.com/0xPlayerOne/hermes-infra/issues/181)) ([9a8de83](https://github.com/0xPlayerOne/hermes-infra/commit/9a8de834b2dbc8ebdf3314ffeb43452a5c3ac1da))
+
+
+### Maintenance
+
+* **code-foundry:** upgrade runtime to v1.4.1 ([#178](https://github.com/0xPlayerOne/hermes-infra/issues/178)) ([7fa5455](https://github.com/0xPlayerOne/hermes-infra/commit/7fa54558df8783bbc3a5913536d790b923f61155))
+
 ## [0.2.24](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.23...hermes-infra-v0.2.24) (2026-09-07)
 
 
