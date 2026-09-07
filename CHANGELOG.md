@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.24](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.23...hermes-infra-v0.2.24) (2026-09-07)
+
+
+### Maintenance
+
+* adopt code-foundry v1.3.1 baseline ([#176](https://github.com/0xPlayerOne/hermes-infra/issues/176)) ([cd5555f](https://github.com/0xPlayerOne/hermes-infra/commit/cd5555f06fd4e1ad4d776b2bd6175a9e44b05b87))
+
 ## [0.2.23](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.22...hermes-infra-v0.2.23) (2026-09-07)
 
 
