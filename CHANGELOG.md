@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.23](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.22...hermes-infra-v0.2.23) (2026-09-07)
+
+
+### Maintenance
+
+* **deps-dev:** bump ruff ([#171](https://github.com/0xPlayerOne/hermes-infra/issues/171)) ([2509fb7](https://github.com/0xPlayerOne/hermes-infra/commit/2509fb755c28ddcb8f3da17d08373df5264bca27))
+
 ## [0.2.22](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.21...hermes-infra-v0.2.22) (2026-09-06)
 
 
