@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.27](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.26...hermes-infra-v0.2.27) (2026-09-08)
+
+
+### Performance
+
+* add runtime and CI regression budgets ([#185](https://github.com/0xPlayerOne/hermes-infra/issues/185)) ([81a8b80](https://github.com/0xPlayerOne/hermes-infra/commit/81a8b806db1d645660d567e2ab691af3d65c0739))
+
 ## [0.2.26](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.25...hermes-infra-v0.2.26) (2026-09-08)
 
 
