@@ -77,8 +77,9 @@ cargo test --all-targets --locked
 .venv/bin/python scripts/install_launchd.py --check
 ```
 
-Confirm both `Validation / Gate` and `Performance Budgets / Build, test, dependencies, and startup`
-pass on the final pull-request commit. The live gateway readiness probe remains an operational check
+Confirm both `Validation / Test / Performance` and `Validation / Gate` pass on the final
+pull-request commit. Code Foundry runs the repository-owned budget script in its shared performance
+job and uploads any standard performance artifacts. The live gateway readiness probe remains an operational check
 and must be run only on a host where the Hermes launchd service is installed:
 
 ```bash
