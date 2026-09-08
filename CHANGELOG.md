@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.26](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.25...hermes-infra-v0.2.26) (2026-09-08)
+
+
+### Maintenance
+
+* **code-foundry:** upgrade to v1.5.0 ([#183](https://github.com/0xPlayerOne/hermes-infra/issues/183)) ([fa1d62f](https://github.com/0xPlayerOne/hermes-infra/commit/fa1d62f287a459b8a62647f16e97bceeb2040255))
+
 ## [0.2.25](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.24...hermes-infra-v0.2.25) (2026-09-07)
 
 
