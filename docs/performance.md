@@ -40,6 +40,8 @@ unit job (1 minute 19 seconds), and the final gate wait (13 seconds).
 
 The unit job now uses `ubuntu-latest`, matching the other native build and test jobs. This removes
 the separate `ubuntu-slim` toolchain/cache family and resolves the `code-foundry doctor` warning.
+uv is pinned in mise because the repository's Python setup and performance audit both require it;
+this keeps local and CI dependency resolution on the measured tool version.
 The scheduled audit should be used to distinguish a normal cold miss after lock/toolchain changes
 from a persistent cache-key problem.
 
