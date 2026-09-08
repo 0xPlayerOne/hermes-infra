@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.28](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.27...hermes-infra-v0.2.28) (2026-09-08)
+
+
+### Maintenance
+
+* **ci:** upgrade Code Foundry to v1.9.11 ([#187](https://github.com/0xPlayerOne/hermes-infra/issues/187)) ([fe14cdd](https://github.com/0xPlayerOne/hermes-infra/commit/fe14cdd6b421d83c34d107858d60d424acc5e750))
+
 ## [0.2.27](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.26...hermes-infra-v0.2.27) (2026-09-08)
 
 
