@@ -1,3 +1,13 @@
+[project]
+name = "hermes-infra"
+dynamic = ["version"]
+requires-python = ">=3.11,<3.12"
+dependencies = []
+
+[tool.uv]
+managed = false
+package = false
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--strict-markers --strict-config --cov=scripts --cov-report=term-missing"

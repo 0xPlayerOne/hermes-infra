@@ -1,0 +1,18 @@
+[python]
+requires_python = ">=3.11,<3.12"
+max_direct_dependencies = 6
+max_resolved_dependencies = 30
+max_environment_bytes = 134217728
+max_install_seconds = 15
+max_test_seconds = 15
+
+[rust]
+max_direct_dependencies = 2
+max_resolved_dependencies = 17
+max_release_binary_bytes = 700000
+max_cold_release_build_seconds = 30
+max_cold_test_seconds = 30
+
+[runtime]
+startup_samples = 20
+max_startup_p95_ms = 20

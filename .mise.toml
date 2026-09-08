@@ -1,6 +1,7 @@
 [tools]
 python = "3.11.15"
 rust = "1.97.1"
+uv = "0.12.9"
 
 [settings]
 experimental = true
