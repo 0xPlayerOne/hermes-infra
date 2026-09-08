@@ -76,6 +76,8 @@ curl -fsS http://127.0.0.1:7331/readyz
 ```
 
 CI requires at least 80% Python line coverage and 50% Rust line coverage.
+The measured baselines, regression budgets, and release checklist are documented in
+[`docs/performance.md`](docs/performance.md).
 
 ## License
 

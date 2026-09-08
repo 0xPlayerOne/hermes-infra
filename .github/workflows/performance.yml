@@ -1,0 +1,33 @@
+name: Performance Budgets
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '17 7 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: performance-${{ github.event_name }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  budgets:
+    name: Build, test, dependencies, and startup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Set up pinned toolchain
+        uses: ./.github/actions/setup
+        with:
+          cache-save: 'false'
+      - name: Check performance budgets
+        run: python scripts/check_performance_budgets.py
