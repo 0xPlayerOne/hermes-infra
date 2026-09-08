@@ -201,6 +201,25 @@ def test_mise_main_print_write_and_skip(load_script, tmp_path, monkeypatch, caps
     assert "SKIP" in capsys.readouterr().out
 
 
+def test_mise_main_rejects_missing_or_non_directory_repo(
+    load_script, tmp_path, monkeypatch, capsys
+):
+    module = load_script("scripts/mise_toml_gen.py")
+
+    monkeypatch.setattr(sys, "argv", ["mise"])
+    with pytest.raises(SystemExit) as missing_repo:
+        module.main()
+    assert missing_repo.value.code == 1
+    assert "usage: mise_toml_gen.py <repo> [--write]" in capsys.readouterr().err
+
+    missing_path = tmp_path / "does-not-exist"
+    monkeypatch.setattr(sys, "argv", ["mise", str(missing_path)])
+    with pytest.raises(SystemExit) as invalid_repo:
+        module.main()
+    assert invalid_repo.value.code == 1
+    assert f"ERROR: {missing_path.resolve()} not a dir" in capsys.readouterr().err
+
+
 def test_repo_registry_is_complete_and_consistent(load_script):
     module = load_script("scripts/repo_registry.py")
     assert len(module.REPO_NAMES) == 9
