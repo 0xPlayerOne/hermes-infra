@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.30](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.29...hermes-infra-v0.2.30) (2026-09-10)
+
+
+### Maintenance
+
+* **code-foundry:** upgrade runtime to v1.28.4 ([175d500](https://github.com/0xPlayerOne/hermes-infra/commit/175d500b85264f7dcf76b518ef687e35ed2d57d7))
+
 ## [0.2.29](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.28...hermes-infra-v0.2.29) (2026-09-10)
 
 
