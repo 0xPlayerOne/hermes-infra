@@ -4,7 +4,7 @@ languages: rust,python
 features: all
 package_manager: none
 runtime_repository: 0xPlayerOne/code-foundry
-runtime_ref: v1.9.11
+runtime_ref: v1.28.2
 performance_runner: ubuntu-latest
 performance: true
 performance_command: '["python","scripts/check_performance_budgets.py"]'
@@ -41,3 +41,8 @@ release_merge_strategy: squash
 opencode_security_model:
 performance_profile:
 performance_budget_file: performance-package-budgets.json
+draft_protection: true
+required_capabilities:
+coverage_enforcement: auto
+coverage_metrics: lines
+coverage_report:

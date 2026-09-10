@@ -70,7 +70,7 @@ THREADS = {
 }
 
 # Map repo short-name to thread ID
-REPO_TO_THREAD = {name: tid for name, tid in THREAD_IDS.items()}
+REPO_TO_THREAD = dict(THREAD_IDS)
 
 INTERN_MENTION = "<@1528604968301494282>"
 SIGNATURE = "\n\n-- **Ye** (directive)"

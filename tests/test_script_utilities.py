@@ -413,7 +413,7 @@ def test_watchdog_main_skips_nested_agents(load_script, tmp_path, monkeypatch, c
     monkeypatch.setattr(module.subprocess, "run", lambda a, **k: calls.append(a))
     module.main()
     assert "100%" in capsys.readouterr().out
-    assert calls == []  # infra skipped + no stamp
+    assert not calls  # infra skipped + no stamp
 
 
 def test_watchdog_main_permission_error_continues(load_script, tmp_path, monkeypatch, capsys):
