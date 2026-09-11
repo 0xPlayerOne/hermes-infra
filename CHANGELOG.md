@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.31](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.30...hermes-infra-v0.2.31) (2026-09-11)
+
+
+### Maintenance
+
+* **cron:** retarget Hermes jobs from staging to direct-to-main ([#198](https://github.com/0xPlayerOne/hermes-infra/issues/198)) ([3339af0](https://github.com/0xPlayerOne/hermes-infra/commit/3339af045d40bf045f5127efefc3e8518e2638ed))
+
 ## [0.2.30](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.29...hermes-infra-v0.2.30) (2026-09-10)
 
 
