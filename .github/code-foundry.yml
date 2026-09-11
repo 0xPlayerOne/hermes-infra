@@ -4,7 +4,7 @@ languages: rust,python
 features: all
 package_manager: none
 runtime_repository: 0xPlayerOne/code-foundry
-runtime_ref: v1.28.11
+runtime_ref: v1.28.14
 performance_runner: ubuntu-latest
 performance: true
 performance_command: '["python","scripts/check_performance_budgets.py"]'
