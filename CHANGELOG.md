@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.34](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.33...hermes-infra-v0.2.34) (2026-09-15)
+
+
+### Tests
+
+* add coverage for CLI entry point and edge cases ([#204](https://github.com/0xPlayerOne/hermes-infra/issues/204)) ([1871311](https://github.com/0xPlayerOne/hermes-infra/commit/1871311933082dd070f8304e4df5882ec5ac2a58))
+
 ## [0.2.33](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.32...hermes-infra-v0.2.33) (2026-09-11)
 
 
