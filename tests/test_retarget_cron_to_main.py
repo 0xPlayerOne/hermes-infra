@@ -7,7 +7,9 @@ direct-to-main. The regression it guards against is real: a naive
 overwrite each other's ``## Tasks`` bodies.
 """
 
+import json
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -210,3 +212,151 @@ def test_update_jobs_reports_count_and_writes(mod, tmp_path):
     assert count == 1
     assert out.exists()
     assert "staging" not in out.read_text().lower()
+
+
+# ── rewrite_prompt edge cases (lines 211-212) ─────────────────────────────
+
+def test_rewrite_prompt_rejects_none(mod):
+    """Non-string input is returned unchanged."""
+    assert mod.rewrite_prompt(None) is None
+
+
+def test_rewrite_prompt_rejects_empty(mod):
+    """Empty string input is returned unchanged."""
+    assert mod.rewrite_prompt("") == ""
+
+
+def test_rewrite_prompt_rejects_non_string(mod):
+    """Non-string input (e.g. int) is returned unchanged."""
+    assert mod.rewrite_prompt(42) == 42
+
+
+# ── update_jobs edge cases ────────────────────────────────────────────────
+
+def test_update_jobs_skips_non_dict_entries(mod):
+    """Non-dict entries in the jobs list are silently skipped (line 278)."""
+    jobs = [
+        {"name": "Weekly Merge - repo", "prompt": STAGING_WEEKLY_MERGE},
+        "not-a-dict",
+        None,
+        {"name": "Daily Standup - repo", "prompt": STAGING_STANDUP},
+    ]
+    count = mod.update_jobs(jobs)
+    assert count == 1  # only Weekly Merge changed; Standup + non-dicts skipped
+
+
+def test_update_jobs_no_changes_returns_zero(mod):
+    """Already-main prompts (no staging) don't increment the counter."""
+    jobs = [
+        {"name": "Weekly Merge - repo", "prompt": STAGING_STANDUP},  # no staging, won't change
+    ]
+    count = mod.update_jobs(jobs)
+    assert count == 0
+
+
+def test_update_jobs_dry_run_no_file(mod, tmp_path):
+    """dry_run=True modifies in memory but does NOT write the output file."""
+    jobs = [{"name": "Weekly Merge - repo", "prompt": STAGING_WEEKLY_MERGE}]
+    out = tmp_path / "jobs.json"
+    count = mod.update_jobs(jobs, out=out, dry_run=True)
+    assert count == 1
+    assert not out.exists()  # file should NOT be written in dry-run mode
+
+
+# ── _resolve_jobs_file (lines 300-307) ────────────────────────────────────
+
+def test_resolve_jobs_file_default(mod):
+    """Without --jobs-file, returns DEFAULT_JOBS_FILE."""
+    result = mod._resolve_jobs_file([])
+    assert isinstance(result, Path)
+    assert result == mod.DEFAULT_JOBS_FILE
+
+
+def test_resolve_jobs_file_with_flag(mod, tmp_path):
+    """With --jobs-file, returns the specified path."""
+    custom = tmp_path / "my-jobs.json"
+    result = mod._resolve_jobs_file(["--jobs-file", str(custom)])
+    assert result == custom
+
+
+def test_resolve_jobs_file_missing_arg(mod):
+    """--jobs-file without a path argument exits with code 1."""
+    with pytest.raises(SystemExit) as exc_info:
+        mod._resolve_jobs_file(["--jobs-file"])
+    assert exc_info.value.code == 1
+
+
+# ── main() entry point (lines 310-342) ───────────────────────────────────
+
+def test_main_missing_jobs_file(mod, monkeypatch, capsys):
+    """main() returns 1 and prints error when jobs file doesn't exist."""
+    monkeypatch.setattr(mod, "load_jobs", lambda p: ([], {}))
+    monkeypatch.setattr(Path, "exists", lambda self: False)
+    rc = mod.main()
+    assert rc == 1
+    captured = capsys.readouterr()
+    assert "Jobs file not found" in captured.err
+
+
+def test_main_dry_run(mod, tmp_path, monkeypatch, capsys):
+    """main() with --dry-run: processes jobs, reports would-be changes, returns 0."""
+    jobs_file = tmp_path / "jobs.json"
+    jobs_data = [
+        {"name": "Weekly Merge - repo", "prompt": STAGING_WEEKLY_MERGE},
+    ]
+    jobs_file.write_text(json.dumps(jobs_data), encoding="utf-8")
+
+    monkeypatch.setattr(sys, "argv", ["retarget-cron-to-main.py", "--jobs-file", str(jobs_file), "--dry-run"])
+    monkeypatch.setattr(mod, "load_jobs", lambda p: (jobs_data, jobs_data))
+
+    rc = mod.main()
+    assert rc == 0
+    captured = capsys.readouterr()
+    assert "Would retarget" in captured.out
+    assert "Would update 1 jobs" in captured.out
+    assert "No staging references remain." in captured.out
+
+
+def test_main_success(mod, tmp_path, monkeypatch, capsys):
+    """main() normal execution: writes jobs file, verifies no staging refs, returns 0."""
+    jobs_file = tmp_path / "jobs.json"
+    jobs_data = [
+        {"name": "Weekly Merge - repo", "prompt": STAGING_WEEKLY_MERGE},
+        {"name": "Daily Standup - repo", "prompt": STAGING_STANDUP},
+    ]
+    jobs_file.write_text(json.dumps(jobs_data), encoding="utf-8")
+
+    # Track what load_jobs returns and what update_jobs writes
+    loaded_data = [dict(j) for j in jobs_data]
+
+    monkeypatch.setattr(sys, "argv", ["retarget-cron-to-main.py", "--jobs-file", str(jobs_file)])
+    monkeypatch.setattr(mod, "load_jobs", lambda p: (loaded_data, loaded_data))
+
+    rc = mod.main()
+    assert rc == 0
+    captured = capsys.readouterr()
+    assert "Retargeting jobs" in captured.out
+    assert "Updated 1 jobs" in captured.out
+    assert "No staging references remain." in captured.out
+
+
+def test_main_staging_remains(mod, tmp_path, monkeypatch, capsys):
+    """main() returns 1 when staging references survive the rewrite."""
+    jobs_file = tmp_path / "jobs.json"
+    # A prompt that survives the rewrite still mentioning staging (edge case)
+    bad_prompt = "This prompt still has staging references and won't be fully rewritten"
+    jobs_data = [{"name": "Weekly Merge - repo", "prompt": bad_prompt}]
+
+    jobs_file.write_text(json.dumps(jobs_data), encoding="utf-8")
+    assert jobs_file.exists(), "jobs file must exist before calling main()"
+
+    monkeypatch.setattr(sys, "argv", ["retarget-cron-to-main.py", "--jobs-file", str(jobs_file)])
+    monkeypatch.setattr(mod, "load_jobs", lambda p: (jobs_data, jobs_data))
+    # Also make rewrite_prompt not remove "staging" so the verification catches it
+    monkeypatch.setattr(mod, "rewrite_prompt", lambda prompt, job_base="": prompt)
+
+    rc = mod.main()
+    assert rc == 1
+    captured = capsys.readouterr()
+    assert "WARNING" in captured.out
+    assert "still mention staging" in captured.out
