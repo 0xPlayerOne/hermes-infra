@@ -216,6 +216,7 @@ def test_update_jobs_reports_count_and_writes(mod, tmp_path):
 
 # ── rewrite_prompt edge cases (lines 211-212) ─────────────────────────────
 
+
 def test_rewrite_prompt_rejects_none(mod):
     """Non-string input is returned unchanged."""
     assert mod.rewrite_prompt(None) is None
@@ -232,6 +233,7 @@ def test_rewrite_prompt_rejects_non_string(mod):
 
 
 # ── update_jobs edge cases ────────────────────────────────────────────────
+
 
 def test_update_jobs_skips_non_dict_entries(mod):
     """Non-dict entries in the jobs list are silently skipped (line 278)."""
@@ -265,6 +267,7 @@ def test_update_jobs_dry_run_no_file(mod, tmp_path):
 
 # ── _resolve_jobs_file (lines 300-307) ────────────────────────────────────
 
+
 def test_resolve_jobs_file_default(mod):
     """Without --jobs-file, returns DEFAULT_JOBS_FILE."""
     result = mod._resolve_jobs_file([])
@@ -288,6 +291,7 @@ def test_resolve_jobs_file_missing_arg(mod):
 
 # ── main() entry point (lines 310-342) ───────────────────────────────────
 
+
 def test_main_missing_jobs_file(mod, monkeypatch, capsys):
     """main() returns 1 and prints error when jobs file doesn't exist."""
     monkeypatch.setattr(mod, "load_jobs", lambda p: ([], {}))
@@ -306,7 +310,9 @@ def test_main_dry_run(mod, tmp_path, monkeypatch, capsys):
     ]
     jobs_file.write_text(json.dumps(jobs_data), encoding="utf-8")
 
-    monkeypatch.setattr(sys, "argv", ["retarget-cron-to-main.py", "--jobs-file", str(jobs_file), "--dry-run"])
+    monkeypatch.setattr(
+        sys, "argv", ["retarget-cron-to-main.py", "--jobs-file", str(jobs_file), "--dry-run"]
+    )
     monkeypatch.setattr(mod, "load_jobs", lambda p: (jobs_data, jobs_data))
 
     rc = mod.main()
