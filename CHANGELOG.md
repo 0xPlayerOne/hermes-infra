@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.36](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.35...hermes-infra-v0.2.36) (2026-09-17)
+
+
+### Maintenance
+
+* point config runtime_ref at v1.29.1 ([#208](https://github.com/0xPlayerOne/hermes-infra/issues/208)) ([4148a5d](https://github.com/0xPlayerOne/hermes-infra/commit/4148a5d8fa5fc435e282ff98a71cce2d83fcf925))
+
 ## [0.2.35](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.34...hermes-infra-v0.2.35) (2026-09-17)
 
 
