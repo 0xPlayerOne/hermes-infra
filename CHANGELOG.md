@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.35](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.34...hermes-infra-v0.2.35) (2026-09-17)
+
+
+### Maintenance
+
+* bump Code Foundry runtime ref to v1.29.1 ([#206](https://github.com/0xPlayerOne/hermes-infra/issues/206)) ([7fb4343](https://github.com/0xPlayerOne/hermes-infra/commit/7fb43439eff537ba88999f9288a4e4818e29aeb9))
+
 ## [0.2.34](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.33...hermes-infra-v0.2.34) (2026-09-15)
 
 
