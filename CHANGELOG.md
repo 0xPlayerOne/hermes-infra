@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.37](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.36...hermes-infra-v0.2.37) (2026-09-17)
+
+
+### Maintenance
+
+* adopt Code Foundry runtime v1.30.0 ([#210](https://github.com/0xPlayerOne/hermes-infra/issues/210)) ([9dbf807](https://github.com/0xPlayerOne/hermes-infra/commit/9dbf8076c83dda611d506b247bc8ecd283de4370))
+
 ## [0.2.36](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.35...hermes-infra-v0.2.36) (2026-09-17)
 
 
