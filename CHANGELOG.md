@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.39](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.38...hermes-infra-v0.2.39) (2026-09-27)
+
+
+### Maintenance
+
+* **deps-dev:** bump pylint in the python-dependencies group ([#215](https://github.com/0xPlayerOne/hermes-infra/issues/215)) ([64d9aea](https://github.com/0xPlayerOne/hermes-infra/commit/64d9aea7c4cdc06a8b45efa99e3762f58771cdfc))
+
 ## [0.2.38](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.37...hermes-infra-v0.2.38) (2026-09-21)
 
 
