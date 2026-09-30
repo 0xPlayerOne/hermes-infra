@@ -295,9 +295,10 @@ for d in /private/tmp/*; do
     [ "$(wt_dirty "$d")" -eq 0 ] || { KEPT_TREES="$KEPT_TREES $name(dirty)"; continue; }
 
     if [ -n "$branch" ]; then
-      # Verified dead: branch merged into main/staging (ff/rebase merges) ...
-      if git -C "$repo" merge-base --is-ancestor "$branch" origin/main 2>/dev/null \
-         || git -C "$repo" merge-base --is-ancestor "$branch" origin/staging 2>/dev/null; then
+      # Verified dead: branch merged into main (ff/rebase merges) ...
+      # Managed repos are git_workflow: direct, so `main` is the only
+      # integration branch; there is no `origin/staging` to reconcile.
+      if git -C "$repo" merge-base --is-ancestor "$branch" origin/main 2>/dev/null; then
         prune=1
       fi
       # ... or gh reports the PR is merged (squash merges are not ancestors)

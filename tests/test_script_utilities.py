@@ -232,13 +232,6 @@ def test_repo_registry_is_complete_and_consistent(load_script):
         assert name in module.REPO_PATHS
 
 
-def test_apply_staging_uses_registry(load_script):
-    module = load_script("scripts/apply-staging-protections.py")
-    names = [name for name, _ in module.REPOS]
-    assert names == module.REPO_NAMES
-    assert ("hermes-infra", "0xPlayerOne/hermes-infra") in module.REPOS
-
-
 def test_apply_main_uses_registry(load_script):
     module = load_script("scripts/apply-main-protections.py")
     names = [name for name, _, _ in module.REPOS]
