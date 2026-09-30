@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.41](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.40...hermes-infra-v0.2.41) (2026-09-30)
+
+
+### Maintenance
+
+* prune the retired staging-branch topology ([#219](https://github.com/0xPlayerOne/hermes-infra/issues/219)) ([debedc0](https://github.com/0xPlayerOne/hermes-infra/commit/debedc0035e80b82dca4ae151c9e61a25c959810))
+
 ## [0.2.40](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.39...hermes-infra-v0.2.40) (2026-09-30)
 
 
