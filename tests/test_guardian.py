@@ -78,6 +78,6 @@ def test_force_with_lease_is_allowed(tmp_path):
     git = fake_bin / "git"
     git.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     git.chmod(0o755)
-    result = run_guardian(tmp_path, "--confirm", "git push --force-with-lease origin staging")
+    result = run_guardian(tmp_path, "--confirm", "git push --force-with-lease origin main")
     assert result.returncode == 0
     assert "BLOCKED" not in result.stderr

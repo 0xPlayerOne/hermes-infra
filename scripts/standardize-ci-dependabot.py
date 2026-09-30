@@ -3,7 +3,7 @@
 Standardize CI workflows + dependabot configs across all 9 repos.
 Fixes:
 1. Action version pinning (checkout@v7, mise-action@v4)
-2. Staging PR skip guard (skip CI when staging PRs into staging)
+2. Single-branch (main-only) triggers
 3. Dependency-type: production restriction (prevents major bumps in grouped PRs)
 4. Missing dependabot configs
 5. Missing permission/concurrency blocks
@@ -22,9 +22,9 @@ BUN_CI_TEMPLATE = """name: CI
 
 on:
   push:
-    branches: [main, staging]
+    branches: [main]
   pull_request:
-    branches: [main, staging]
+    branches: [main]
 
 permissions:
   contents: read
@@ -36,7 +36,6 @@ concurrency:
 jobs:
   quality:
     name: Build, Format, Lint & Type Check
-    if: github.event_name != 'pull_request' || github.head_ref != 'staging'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -82,7 +81,7 @@ SMART_CONTRACTS_CI = """name: CI
 
 on:
   push:
-    branches: [main, staging]
+    branches: [main]
 
 permissions:
   contents: read
@@ -168,7 +167,7 @@ def build_npm_dependabot_config(labels: bool = False) -> str:
 updates:
   - package-ecosystem: npm
     directory: /
-    target-branch: staging
+    target-branch: main
     schedule:
       interval: weekly
       day: monday
@@ -184,7 +183,7 @@ updates:
 
   - package-ecosystem: github-actions
     directory: /
-    target-branch: staging
+    target-branch: main
     schedule:
       interval: weekly
       day: monday
@@ -202,7 +201,7 @@ BUN_DEPENDABOT = """version: 2
 updates:
   - package-ecosystem: bun
     directory: /
-    target-branch: staging
+    target-branch: main
     schedule:
       interval: weekly
       day: monday
@@ -220,7 +219,7 @@ updates:
 
   - package-ecosystem: github-actions
     directory: /
-    target-branch: staging
+    target-branch: main
     schedule:
       interval: weekly
       day: monday
@@ -242,7 +241,7 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 10
-    target-branch: staging
+    target-branch: main
     labels:
       - dependencies
       - python
@@ -259,7 +258,7 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 10
-    target-branch: staging
+    target-branch: main
     labels:
       - dependencies
       - rust
@@ -277,7 +276,7 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
-    target-branch: staging
+    target-branch: main
     labels:
       - dependencies
       - ci
@@ -288,7 +287,7 @@ MODEL_GATEWAY_DEPENDABOT = """version: 2
 updates:
   - package-ecosystem: cargo
     directory: /
-    target-branch: staging
+    target-branch: main
     schedule:
       interval: weekly
       day: monday
@@ -306,7 +305,7 @@ updates:
 
   - package-ecosystem: github-actions
     directory: /
-    target-branch: staging
+    target-branch: main
     schedule:
       interval: weekly
       day: monday
