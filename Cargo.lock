@@ -14,7 +14,7 @@ dependencies = [
 
 [[package]]
 name = "hermes-infra"
-version = "0.2.46"
+version = "0.2.47"
 dependencies = [
  "fs2",
  "serde_json",
