@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.48](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.47...hermes-infra-v0.2.48) (2026-10-22)
+
+
+### Maintenance
+
+* pin Code Foundry 1.48.4 and regenerate workflows ([#236](https://github.com/0xPlayerOne/hermes-infra/issues/236)) ([7d27b0f](https://github.com/0xPlayerOne/hermes-infra/commit/7d27b0fbcd7cb7445f42faa46b024144d71fa0a5))
+
 ## [0.2.47](https://github.com/0xPlayerOne/hermes-infra/compare/hermes-infra-v0.2.46...hermes-infra-v0.2.47) (2026-10-08)
 
 
